@@ -1,5 +1,5 @@
 import pandas as pd
-from src.schema import CANONICAL_COLUMNS, COLUMN_ALIASES
+from src.schema import ID_COLUMNS, CANONICAL_COLUMNS, COLUMN_ALIASES
 
 # Normalize column names and rename to canonical names when mode is auto
 def normalize_columns(df):
@@ -17,7 +17,7 @@ def normalize_columns(df):
 
 # Auto detect subject columns by excluding canonical ID columns
 def detect_subject_columns(df):
-    id_columns = CANONICAL_COLUMNS.copy()
+    id_columns = ID_COLUMNS.copy()
 
     subject_columns = [col for col in df.columns if col not in id_columns]
 
@@ -36,7 +36,7 @@ def apply_manual_column_mapping(df, manual_mapping):
 def reshape_wide_to_long(df, subject_columns):
     
     df = df.copy()
-    id_columns = CANONICAL_COLUMNS.copy()
+    id_columns = ID_COLUMNS.copy()
     
     long_df = df.melt(id_vars = id_columns, value_vars = subject_columns, var_name = "subject", value_name = "marks")
     
@@ -47,7 +47,7 @@ def clean_marks(df):
     df = df.copy()
     
     before_count = df['marks'].notna().sum()
-    df['marks'] = df['marks'].astype(str).str.extract(r'(\d+\.?\d*)', expand = False).astype('Int64')
+    df['marks'] = df['marks'].astype(str).str.extract(r'(\d+\.?\d*)', expand = False).astype('Float64')
     after_count = df['marks'].notna().sum()
     
     result = {'marks_before': before_count, 'marks_after': after_count, 'invalid_marks': before_count - after_count}

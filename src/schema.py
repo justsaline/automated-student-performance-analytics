@@ -1,12 +1,15 @@
-CANONICAL_COLUMNS = [
+ID_COLUMNS = [
     "reg_no",
     "student_name",
     "class",
     "term",
-    "marks",
     "attendance"
 ]
 
+CANONICAL_COLUMNS = ID_COLUMNS + [
+    "subject",
+    "marks"
+]
 
 COLUMN_ALIASES = {
     "reg_no": [
@@ -21,9 +24,6 @@ COLUMN_ALIASES = {
     ],
     "term": [
         "term", "exam", "semester", "assessment"
-    ],
-    "marks": [
-        "marks", "score", "marks obtained"
     ],
     "attendance": [
         "attendance", "attendance %", "attendance percentage"
