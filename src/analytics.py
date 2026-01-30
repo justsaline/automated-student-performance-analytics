@@ -28,3 +28,41 @@ def at_risk_students(df,marks_threshold=40,attendance_threshold=75):
 
     at_risk = stats[(stats['avg_marks'] < marks_threshold) | (stats['avg_attendance'] < attendance_threshold)]
     return at_risk
+
+def rank_students(df):
+    
+    summary = student_summary(df)
+    summary['rank'] = summary['avg_marks'].rank(ascending= False, method='dense').astype(int)
+    
+    return  summary.sort_values('rank')
+
+def student_subject_analysis(df, reg_no):
+    
+    student_df = df[df['reg_no'] == reg_no]
+    
+    if student_df.empty:
+        raise ValueError(f"No data found for reg_no: {reg_no}")
+    
+    student_perf = student_df[['subject', 'marks']].sort_values('subject').reset_index(drop=True)
+    
+    return student_perf
+
+def student_strengths_weaknesses(df, reg_no):
+    
+    perf = student_subject_analysis(df, reg_no)
+    
+    strengths = perf[perf['marks']>=75]['subject'].tolist()
+    weaknesses = perf[perf['marks']<40]['subject'].tolist()
+    average = perf[(perf['marks'] >= 40) & (perf['marks'] < 75)]['subject'].tolist()
+    
+    return {'strengths': strengths,'average': average,'weaknesses': weaknesses}
+
+def student_overview(df, reg_no):
+    
+    summary = student_summary(df)
+    
+    student = summary[summary['reg_no']==reg_no]
+    if student.empty:
+        raise ValueError(f"No data found for reg_no: {reg_no}")
+    
+    return student.iloc[0].to_dict()
