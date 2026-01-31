@@ -1,6 +1,28 @@
 import pandas as pd
 from src.schema import ID_COLUMNS, CANONICAL_COLUMNS, COLUMN_ALIASES
 
+def load_data(uploaded_file):
+    if uploaded_file is None:
+        raise ValueError("No file uploaded.")
+    file_name = uploaded_file.name.lower()
+    
+    try:
+        if file_name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file)
+        elif file_name.endswith(".xlsx"):
+            df = pd.read_excel(uploaded_file)
+        else:
+            raise ValueError("Unsupported file format. Please upload a CSV or Excel file.") 
+    except Exception as e:
+        raise ValueError(f"Failed to read file {e}")
+    
+    if df.empty:
+        raise ValueError("Uploaded file contains no data.")
+    if df.columns.size ==0:
+        raise ValueError("Uploaded file contains no columns.")
+    
+    return df
+
 # Normalize column names and rename to canonical names when mode is auto
 def normalize_columns(df):
     df = df.copy()
