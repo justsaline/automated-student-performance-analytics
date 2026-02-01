@@ -1,12 +1,12 @@
 import streamlit as st
 import pandas as pd
 from src.data_cleaning import load_data, clean_data
-from src.schema import CANONICAL_COLUMNS, ID_COLUMNS
+from src.schema import ID_COLUMNS
 
 
 st.set_page_config(page_title="Automated Student Performance Analysis", layout="wide")
 
-st.title("Automated Student Performance Analysis")
+st.title("🎓 Automated Student Performance Analysis")
 st.caption("Upload student data to begin analysis.")
 
 if "data_ready" not in st.session_state:
@@ -14,17 +14,18 @@ if "data_ready" not in st.session_state:
     
 uploaded_file = st.file_uploader("Upload student data (CSV or Excel)", type = ['csv', 'xlsx'])
 
-if uploaded_file is None:
+if uploaded_file is not None:
+    try: 
+        st.session_state.raw_df = load_data(uploaded_file)
+    except ValueError as e:
+        st.error(str(e))
+        st.stop()
+        
+if "raw_df" not in st.session_state:
     st.info("Please upload a CSV or Excel file to continue.")
     st.stop()
     
-try:
-    raw_df = load_data(uploaded_file)
-except ValueError as e:
-    st.error(str(e))
-    st.stop()
-    
-st.session_state.raw_df = raw_df
+raw_df = st.session_state.raw_df
 
 st.subheader("Preview of Uploaded Data")
 st.dataframe(raw_df.head(), width = "stretch")
@@ -91,7 +92,6 @@ if mode == "manual":
 
     if not manual_mapping or not subject_columns:
         st.warning("Manual mode requires column mapping and subject selection.")
-        
 
 st.divider()
 
@@ -102,7 +102,9 @@ if run_cleaning:
         if mode == "auto":
             cleaned_df, report = clean_data(raw_df, mode = "auto")
         else:
-            cleaned_df, report = clean_data(raw_df, mode = "manual", manual_mapping = manual_mapping, subject_columns = subject_columns)
+            cleaned_df, report = clean_data(raw_df, mode = "manual",
+                                            manual_mapping = manual_mapping,
+                                            subject_columns = subject_columns)
             
     except Exception as e:
         st.error(str(e))
@@ -112,3 +114,28 @@ if run_cleaning:
     st.session_state.cleaning_report = report
     st.session_state.data_ready = True
     st.success("Data Cleaned Successfully")
+
+if "cleaning_report" in st.session_state:
+    report = st.session_state.cleaning_report
+
+    with st.expander("🧹 Data Cleaning Summary", expanded=True):
+        c1, c2, c3 = st.columns(3)
+
+        c1.metric("Rows Before", report["rows_before"])
+        c2.metric("Rows After", report["rows_after"])
+        c3.metric("Rows Dropped", report["rows_dropped"])
+
+        st.divider()
+
+        c4, c5, c6 = st.columns(3)
+
+        c4.metric("Valid Marks", report["marks_after"])
+        c5.metric("Invalid Marks Removed", report["invalid_marks"])
+        c6.metric("Duplicate Rows Found", report["duplicate_rows_detected"])
+
+        st.divider()
+
+        c7, c8 = st.columns(2)
+
+        c7.metric("Valid Attendance", report["attendance_after"])
+        c8.metric("Invalid Attendance Removed", report["invalid_attendance"])

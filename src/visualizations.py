@@ -29,3 +29,44 @@ def performance_category_donut(perf_dict):
     fig.update_layout(height = 350)
     
     return fig
+
+def subject_performance_heatmap(cleaned_df):
+    df = cleaned_df.copy()
+
+    df = df.dropna(subset=["marks", "subject", "reg_no"])
+
+    bins = [0, 40, 60, 75, 90, 100]
+    labels = ["0–40", "41–60", "61–75", "76–90", "91–100"]
+
+    df["score_band"] = pd.cut(
+        df["marks"],
+        bins=bins,
+        labels=labels,
+        include_lowest=True)
+
+    heatmap_df = (
+        df.groupby(["score_band", "subject"])["reg_no"]
+        .nunique()
+        .reset_index(name="student_count"))
+
+    pivot_df = heatmap_df.pivot(
+        index="score_band",
+        columns="subject",
+        values="student_count"
+    ).fillna(0)
+
+    fig = px.imshow(
+        pivot_df,
+        text_auto=True,
+        aspect="auto",
+        color_continuous_scale="YlOrRd",
+        labels={
+            "x": "Subject",
+            "y": "Score Range",
+            "color": "Number of Students"
+        })
+
+    fig.update_layout(
+        title="Subject-wise Performance Distribution",)
+
+    return fig

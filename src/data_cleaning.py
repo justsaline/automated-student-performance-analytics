@@ -1,5 +1,5 @@
 import pandas as pd
-from src.schema import ID_COLUMNS, CANONICAL_COLUMNS, COLUMN_ALIASES
+from src.schema import ID_COLUMNS, COLUMN_ALIASES
 
 def load_data(uploaded_file):
     if uploaded_file is None:
