@@ -59,14 +59,34 @@ def subject_performance_heatmap(cleaned_df):
         pivot_df,
         text_auto=True,
         aspect="auto",
-        color_continuous_scale="YlOrRd",
+        color_continuous_scale="Viridis",
         labels={
             "x": "Subject",
             "y": "Score Range",
             "color": "Number of Students"
         })
-
     fig.update_layout(
         title="Subject-wise Performance Distribution",)
 
     return fig
+
+def top_students_bar(rank_df, top_n=10):
+    df = rank_df.head(top_n).copy()
+    df = df.sort_values("avg_marks")
+    
+    fig = px.bar(df, x='avg_marks', y = 'student_name',
+                 orientation = 'h', text = "avg_marks", 
+                title = f'Top {top_n} Students by Average Marks',
+                labels = {'avg_marks': 'Average Marks', 'student_name': 'Student'},
+                color="avg_marks",color_continuous_scale="Tealgrn")
+
+    fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
+    fig.update_layout(
+        xaxis_range=[0, 100],
+        height=380,
+        showlegend=False,
+        yaxis_title=None,
+    )
+
+    return fig
+    

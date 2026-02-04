@@ -28,7 +28,7 @@ if "raw_df" not in st.session_state:
 raw_df = st.session_state.raw_df
 
 st.subheader("Preview of Uploaded Data")
-st.dataframe(raw_df.head(), width = "stretch")
+st.dataframe(raw_df.head(5), width = "stretch")
 
 st.subheader("⚙️ Cleaning Mode")
 
@@ -139,3 +139,8 @@ if "cleaning_report" in st.session_state:
 
         c7.metric("Valid Attendance", report["attendance_after"])
         c8.metric("Invalid Attendance Removed", report["invalid_attendance"])
+        
+st.divider()
+st.markdown(
+    "<p style='text-align: center; color: gray;'>Data processed for summary</p>",
+    unsafe_allow_html=True)

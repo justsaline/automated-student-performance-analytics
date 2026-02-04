@@ -81,7 +81,15 @@ def clean_attendance(df):
     df = df.copy()
     
     before_count = df['attendance'].notna().sum()
-    df['attendance'] = df['attendance'].astype(str).str.extract(r'(\d+\.?\d*)', expand = False).astype('float')
+    
+    att = df['attendance']
+    att = att.apply(lambda x: x if pd.isna(x) else str(x))
+    att = att.str.extract(r"(\d+\.?\d*)", expand=False).astype('float')
+    mask = att.between(0, 1, inclusive="neither")
+    att.loc[mask] = att.loc[mask] * 100
+    df['attendance'] = att
+
+    df.loc[df["attendance"] <= 1, "attendance"] *= 100
     after_count = df['attendance'].notna().sum()
     
     result = {'attendance_before': before_count, 'attendance_after': after_count, 'invalid_attendance': before_count - after_count}
