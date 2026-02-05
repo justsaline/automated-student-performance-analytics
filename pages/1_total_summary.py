@@ -1,6 +1,7 @@
 import streamlit as st
 from src.analytics import rank_students, at_risk_students, subject_summary
-from src.visualizations import subject_performance_heatmap, top_students_bar
+from src.visualizations import subject_performance_heatmap, top_students_bar, at_risk_scatter
+from src.schema import PASS_MARK
 
 st.set_page_config(
     page_title="Total Summary",
@@ -81,24 +82,26 @@ with st.expander("📋 View Full Student Rankings"):
         height=400
     )
 
-at_risk_df = at_risk_students(long_df).reset_index()
+at_risk_df = at_risk_students(long_df, PASS_MARK).reset_index()
 
 st.divider()
 
 st.subheader("⚠️ At-Risk Students")
-st.caption("Students listed below have been identified as at-risk based on low average marks or attendance.")
-st.write("Count: ", len(at_risk_df))
+st.write("Students At Risk: ", len(at_risk_df))
 if not at_risk_df.empty:
-    st.dataframe(
-        at_risk_df[
-            ["reg_no", "student_name", "avg_marks", "avg_attendance"]
-        ],
-        use_container_width=True
-    )
+    fig = at_risk_scatter(at_risk_df)
+    st.plotly_chart(fig, use_container_width=True)
+    with st.expander("📋 View At-Risk Students Details"):
+        st.caption("Students listed below have been identified as at-risk based on low average marks or attendance.")
+        st.dataframe(
+            at_risk_df[
+                ["reg_no", "student_name", "avg_marks", "avg_attendance"]
+            ],
+            use_container_width=True
+        )
 else:
     st.success("No at-risk students detected.")
     
-st.divider()
 st.markdown(
     "<p style='text-align: center; color: gray;'>End of summary</p>",
     unsafe_allow_html=True)

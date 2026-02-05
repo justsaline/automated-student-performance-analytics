@@ -1,4 +1,5 @@
 import pandas as pd
+from src.schema import PASS_MARK
 
 def subject_summary(df):
     summary = df.groupby('subject').agg(students = ('reg_no', 'nunique'), avg_marks = ('marks', 'mean'), avg_attendance = ('attendance', 'mean')).reset_index()
@@ -17,16 +18,16 @@ def student_summary(df):
             term=('term', 'first'),
             subjects_taken=('subject', 'nunique'),
             avg_marks=('marks', 'mean'),
-            avg_attendance=('attendance', 'mean')
+            avg_attendance=('attendance', lambda x: x.mean(skipna=True))
         ).reset_index()
     )
     return summary
 
-def at_risk_students(df,marks_threshold=40,attendance_threshold=75):
+def at_risk_students(df,PASS_MARK,attendance_threshold=75):
 
     stats = student_summary(df)
 
-    at_risk = stats[(stats['avg_marks'] < marks_threshold) | (stats['avg_attendance'] < attendance_threshold)]
+    at_risk = stats[(stats['avg_marks'] < PASS_MARK) | (stats['avg_attendance'] < attendance_threshold)]
     return at_risk
 
 def rank_students(df):

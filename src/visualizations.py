@@ -1,5 +1,6 @@
 import pandas as pd
 import plotly.express as px
+from src.schema import MARKS_MIN, MARKS_MAX,ATTENDANCE_MIN, ATTENDANCE_MAX,PASS_MARK
 
 def student_subject_marks_bar(student_subject_df):
     fig = px.bar(student_subject_df, x='subject', y='marks',
@@ -90,3 +91,33 @@ def top_students_bar(rank_df, top_n=10):
 
     return fig
     
+def at_risk_scatter(at_risk_df, attendance_threshold = 75):
+    fig = px.scatter(at_risk_df, x='avg_attendance', y='avg_marks',
+                    hover_data=['student_name', 'reg_no'],
+                    labels={
+                    "avg_attendance": "Average Attendance (%)",
+                    "avg_marks": "Average Marks"
+                    },
+                    title="At-Risk Students: Marks vs Attendance")
+    fig.add_vline(
+    x=attendance_threshold,
+    line_dash="dash",
+    line_color="orange",
+    annotation_text=f"Attendance Threshold ({attendance_threshold}%)",
+    annotation_position="top right"
+    )
+    fig.add_hline(
+    y=PASS_MARK,
+    line_dash="dash",
+    line_color="red",
+    annotation_text=f"Passing Mark ({PASS_MARK})",
+    annotation_position="top right"
+    )
+
+    fig.update_layout(
+        xaxis_range=[ATTENDANCE_MIN, ATTENDANCE_MAX],
+        yaxis_range=[MARKS_MIN, MARKS_MAX],
+        height=380
+    )
+
+    return fig
