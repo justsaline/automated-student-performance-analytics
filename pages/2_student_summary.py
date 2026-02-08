@@ -75,12 +75,88 @@ with col2:
             hide_index = True
         )
 st.divider()
-dist_fig = student_marks_distribution(student_perf)
-st.plotly_chart(dist_fig, use_container_width = True)
+bins = [0, 40, 60, 75, 100]
+labels = ["0–40", "41–60", "61–75", "76–100"]
 
+temp_df = student_perf.copy()
+temp_df["marks_range"] = pd.cut(
+    temp_df["marks"],
+    bins=bins,
+    labels=labels,
+    include_lowest=True
+)
+
+range_summary = (
+    temp_df.groupby("marks_range")["subject"]
+    .agg(
+        Subjects=lambda x: ", ".join(x),
+        Count="count"
+    )
+    .reindex(labels, fill_value=0)
+    .reset_index()
+)
+
+range_summary.columns = ["Marks Range", "Subjects", "Count"]
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    dist_fig = student_marks_distribution(student_perf)
+    st.plotly_chart(dist_fig, use_container_width=True)
+
+with col2:
+    with st.expander("📌 Marks Range Summary", expanded=True):
+        st.markdown(
+            "This table shows how the student's subjects are distributed "
+            "across different performance ranges."
+        )
+        st.dataframe(
+            range_summary,
+            use_container_width=True,
+            hide_index=True
+        )
+        
 st.divider()
 
 st.subheader("Performance Category")
+total_subjects = (
+    len(perf_dict["strengths"])
+    + len(perf_dict["average"])
+    + len(perf_dict["weaknesses"])
+)
+
+strong = len(perf_dict["strengths"])
+weak = len(perf_dict["weaknesses"])
+
+if strong / total_subjects >= 0.6:
+    insight = "🟢 The student shows strong overall performance across most subjects."
+elif weak / total_subjects >= 0.4:
+    insight = "🔴 The student has multiple weak-performing subjects and may need support."
+else:
+    insight = "🟡 The student’s performance is mixed across subjects."
+
+st.info(insight)
 
 perf_fig = performance_category_donut(perf_dict)
-st.plotly_chart(perf_fig, use_container_width = True)
+st.plotly_chart(perf_fig, use_container_width=True)
+
+st.divider()
+with st.expander("📄 Show Full Student Details"):
+    st.markdown(
+        "This table displays the complete subject-wise academic record "
+        "for the selected student."
+    )
+
+    student_full_df = (
+        long_df[long_df["reg_no"] == selected_reg_no]
+        .sort_values("subject")
+        .reset_index(drop=True)
+    )
+
+    st.dataframe(
+        student_full_df,
+        use_container_width=True,
+        hide_index=True
+    )
+st.markdown(
+    "<p style='text-align: center; color: gray;'>End of summary</p>",
+    unsafe_allow_html=True)

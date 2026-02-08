@@ -1,5 +1,5 @@
 import pandas as pd
-from src.schema import ID_COLUMNS, COLUMN_ALIASES
+from src.schema import ID_COLUMNS, COLUMN_ALIASES, MARKS_MIN, MARKS_MAX, ATTENDANCE_MIN, ATTENDANCE_MAX
 
 def load_data(uploaded_file):
     if uploaded_file is None:
@@ -70,6 +70,7 @@ def clean_marks(df):
     
     before_count = df['marks'].notna().sum()
     df['marks'] = df['marks'].astype(str).str.extract(r'(\d+\.?\d*)', expand = False).astype('Float64')
+    df.loc[~df['marks'].between(MARKS_MIN, MARKS_MAX),'marks'] = pd.NA
     after_count = df['marks'].notna().sum()
     
     result = {'marks_before': before_count, 'marks_after': after_count, 'invalid_marks': before_count - after_count}
@@ -88,8 +89,7 @@ def clean_attendance(df):
     mask = att.between(0, 1, inclusive="neither")
     att.loc[mask] = att.loc[mask] * 100
     df['attendance'] = att
-
-    df.loc[df["attendance"] <= 1, "attendance"] *= 100
+    df.loc[~df['attendance'].between(ATTENDANCE_MIN, ATTENDANCE_MAX),'attendance'] = pd.NA
     after_count = df['attendance'].notna().sum()
     
     result = {'attendance_before': before_count, 'attendance_after': after_count, 'invalid_attendance': before_count - after_count}

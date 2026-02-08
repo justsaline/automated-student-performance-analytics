@@ -13,21 +13,51 @@ def student_subject_marks_bar(student_subject_df):
     return fig
 
 def student_marks_distribution(student_subject_df):
-    fig = px.histogram(student_subject_df, x='marks', nbins = 5,
-                       title = 'Marks distribution',
-                       labels = {'marks':'Marks'})
-    fig.update_layout(xaxis_range = [0,100], height = 350)
+    fig = px.histogram(
+        student_subject_df,
+        x="marks",
+        nbins=5,
+        title="Marks Distribution",
+        labels={"marks": "Marks"},
+    )
+
+    fig.add_vline(
+        x=PASS_MARK,
+        line_dash="dash",
+        line_color="red",
+        annotation_text=f"Pass Mark ({PASS_MARK})",
+        annotation_position="top"
+    )
+
+    fig.update_layout(
+        xaxis_range=[0, 100],
+        yaxis_title="Number of Subjects",
+        bargap=0.25,
+        height=350
+    )
     return fig
 
 def performance_category_donut(perf_dict):
     df = pd.DataFrame({
-        'category': ["Strengths", "Average", "Weaknesses"],
-        'count': [len(perf_dict['strengths']),
-                  len(perf_dict['average']),
-                  len(perf_dict['weaknesses'])]
-        })
-    fig = px.pie(df, names='category', values='count', hole = 0.5, title = 'Performance Breakdown')
-    fig.update_layout(height = 350)
+        "category": ["Strong (≥75)", "Average (40–74)", "Weak (<40)"],
+        "count": [
+            len(perf_dict["strengths"]),
+            len(perf_dict["average"]),
+            len(perf_dict["weaknesses"])
+        ]
+    })
+
+    fig = px.pie(
+        df,
+        names="category",
+        values="count",
+        hole=0.5,
+        title="Performance Breakdown")
+    fig.update_traces(
+        textinfo="label+value")
+    fig.update_layout(
+        height=350,
+        showlegend=True)
     
     return fig
 
