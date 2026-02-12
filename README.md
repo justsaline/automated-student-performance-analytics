@@ -10,6 +10,27 @@ The system is modular in design and separates responsibilities into data loading
 
 ---
 
+## Application Preview
+
+The following screenshots demonstrate the interactive dashboard interface of the system.
+
+### Cohort-Level Dashboard (Total Summary with Filtering)
+
+<img src="assets/total_summary.png" width="100%"/>
+
+This dashboard provides a high-level overview of student performance across the dataset.  
+It includes cohort filtering, aggregate performance metrics, subject-wise heatmap visualization, ranking analysis, and at-risk student detection.
+
+---
+
+### Individual-Level Dashboard (Student Summary)
+
+<img src="assets/student_summary.png" width="100%"/>
+
+This dashboard provides detailed academic insights for a selected student, including subject-wise marks visualization, performance categorization, distribution analysis, and full academic record display.
+
+---
+
 ## System Architecture
 
 The application is structured as a multi-page Streamlit application with modular backend components:
