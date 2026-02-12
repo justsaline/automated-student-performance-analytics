@@ -8,8 +8,9 @@ def student_subject_marks_bar(student_subject_df):
                  labels = {'marks': 'Marks', 'subject': 'Subject'},
                  color = 'subject')
     
+    fig.update_traces(texttemplate="%{text:.2f}")
     fig.update_traces(textposition='outside')
-    fig.update_layout(yaxis_range = [0,100], showlegend = False, height = 400)
+    fig.update_layout(yaxis_range = [0,100], showlegend = False)
     return fig
 
 def student_marks_distribution(student_subject_df):
@@ -39,26 +40,28 @@ def student_marks_distribution(student_subject_df):
 
 def performance_category_donut(perf_dict):
     df = pd.DataFrame({
-        "category": ["Strong (≥75)", "Average (40–74)", "Weak (<40)"],
-        "count": [
-            len(perf_dict["strengths"]),
-            len(perf_dict["average"]),
-            len(perf_dict["weaknesses"])
+        'category': ["Strengths", "Average", "Weaknesses"],
+        'count': [
+            len(perf_dict['strengths']),
+            len(perf_dict['average']),
+            len(perf_dict['weaknesses'])
         ]
     })
-
+    color_map = {
+        "Strengths": "#2ECC71",     # Green
+        "Average": "#F1C40F",       # Amber
+        "Weaknesses": "#E74C3C"     # Red
+    }
     fig = px.pie(
         df,
-        names="category",
-        values="count",
+        names='category',
+        values='count',
         hole=0.5,
-        title="Performance Breakdown")
-    fig.update_traces(
-        textinfo="label+value")
-    fig.update_layout(
-        height=350,
-        showlegend=True)
-    
+        title='Performance Breakdown',
+        color='category',
+        color_discrete_map=color_map
+    )
+    fig.update_layout(height=350)
     return fig
 
 def subject_performance_heatmap(cleaned_df):

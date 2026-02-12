@@ -20,7 +20,7 @@ st.title("👤 Student Summary")
 if not st.session_state.get("data_ready", False):
     st.warning("Please upload and process data on the main page first.")
     st.stop()
-    
+
 long_df = st.session_state.long_df
 
 student_ids = (
@@ -38,16 +38,39 @@ selected_label = st.selectbox(
     options=list(student_label_map.keys()))
 
 selected_reg_no = student_label_map[selected_label]
+student_terms = (
+    long_df[long_df["reg_no"] == selected_reg_no]["term"]
+    .dropna()
+    .unique()
+)
 
-overview = student_overview(long_df, selected_reg_no)
+selected_term = st.selectbox(
+    "Select Term",
+    options=["All Terms"] + sorted(list(student_terms))
+)
+
+student_df = long_df[long_df["reg_no"] == selected_reg_no]
+
+if selected_term != "All Terms":
+    student_df = student_df[student_df["term"] == selected_term]
+
+overview = student_overview(student_df, selected_reg_no)
 attendance = overview["avg_attendance"]
 
 if pd.isna(attendance):
     attendance_display = "Not Available"
 else:
     attendance_display = f"{attendance:.2f}%"
-student_perf = student_subject_analysis(long_df, selected_reg_no)
-perf_dict = student_strengths_weaknesses(long_df, selected_reg_no)
+if selected_term == "All Terms":
+    student_perf = (
+        student_df
+        .groupby("subject", as_index=False)
+        .agg(marks=("marks", "mean"))
+        .sort_values("subject")
+    )
+else:
+    student_perf = student_df[["subject", "marks"]].sort_values("subject")
+perf_dict = student_strengths_weaknesses(student_df, selected_reg_no)
 
 c1, c2, c3 = st.columns(3)
 
@@ -58,6 +81,7 @@ c3.metric("Subjects Taken", overview["subjects_taken"])
 st.divider()
 
 st.subheader("📊 Subject-wise Performance")
+st.caption(f"Showing performance for: {selected_term}")
 
 col1, col2 = st.columns([2, 1])
 with col1:
@@ -147,7 +171,7 @@ with st.expander("📄 Show Full Student Details"):
     )
 
     student_full_df = (
-        long_df[long_df["reg_no"] == selected_reg_no]
+        student_df[student_df["reg_no"] == selected_reg_no]
         .sort_values("subject")
         .reset_index(drop=True)
     )
