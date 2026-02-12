@@ -62,7 +62,7 @@ st.subheader("📊 Subject-wise Performance")
 col1, col2 = st.columns([2, 1])
 with col1:
     bar_chart = student_subject_marks_bar(student_perf)
-    st.plotly_chart(bar_chart, use_container_width = True)
+    st.plotly_chart(bar_chart, width = "stretch")
 with col2:
     with st.expander("ℹ️ About Subject Marks Bar Chart", expanded=True):
         st.markdown(
@@ -71,7 +71,7 @@ with col2:
         )
         st.dataframe(
             student_perf,
-            use_container_width = True,
+            width = "stretch",
             hide_index = True
         )
 st.divider()
@@ -101,7 +101,7 @@ col1, col2 = st.columns([2, 1])
 
 with col1:
     dist_fig = student_marks_distribution(student_perf)
-    st.plotly_chart(dist_fig, use_container_width=True)
+    st.plotly_chart(dist_fig, width="stretch")
 
 with col2:
     with st.expander("📌 Marks Range Summary", expanded=True):
@@ -111,7 +111,7 @@ with col2:
         )
         st.dataframe(
             range_summary,
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
         
@@ -137,7 +137,7 @@ else:
 st.info(insight)
 
 perf_fig = performance_category_donut(perf_dict)
-st.plotly_chart(perf_fig, use_container_width=True)
+st.plotly_chart(perf_fig, width="stretch")
 
 st.divider()
 with st.expander("📄 Show Full Student Details"):
@@ -154,7 +154,7 @@ with st.expander("📄 Show Full Student Details"):
 
     st.dataframe(
         student_full_df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True
     )
 st.markdown(
