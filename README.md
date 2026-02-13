@@ -33,15 +33,30 @@ This dashboard provides detailed academic insights for a selected student, inclu
 
 ## System Architecture
 
+### System Workflow Diagram
+
+<p align="center">
+  <img src="assets/system_architecture.png" width = "90%"/>
+</p>
+
+The diagram above illustrates the end-to-end flow of the application, 
+starting from user data upload to insight generation.
+
+
 The application is structured as a multi-page Streamlit application with modular backend components:
 
-- `app.py` – Main interface for data upload and cleaning execution  
-- `data_cleaning.py` – Complete preprocessing and validation pipeline  
-- `analytics.py` – Aggregation, ranking, and risk detection logic  
-- `visualizations.py` – Plotly-based visualization generation  
-- `schema.py` – Canonical schema definitions and system constants  
-- `1_total_summary.py` – Cohort-level dashboard  
-- `2_student_summary.py` – Individual student-level dashboard  
+### Core Modules
+
+| Module | Responsibility |
+|--------|---------------|
+| `app.py` | File upload & cleaning execution |
+| `data_cleaning.py` | Preprocessing & validation pipeline |
+| `analytics.py` | Aggregation, ranking & risk detection |
+| `visualizations.py` | Plotly-based chart generation |
+| `schema.py` | Canonical schema & system constants |
+| `01_Total_Summary.py` | Cohort-level dashboard |
+| `02_Student_Summary.py` | Individual student dashboard |
+
 
 This separation ensures maintainability, scalability, and clarity of logic.
 
@@ -106,10 +121,15 @@ Marks are assumed to lie within the range 0–100.
 
 ### Attendance Cleaning
 
-Attendance values are standardized to percentage format. The system handles:
+Attendance values are standardized to percentage format.
 
-- Values already in percentage form (e.g., 82, 75%)
-- Decimal values representing proportions (e.g., 0.85 converted to 85%)
+The system intelligently standardizes attendance values:
+
+- Converts decimals (0.85 → 85%)
+- Handles percentage symbols (75% → 75)
+- Removes invalid entries
+- Enforces range validation (0–100)
+
 
 Invalid or non-numeric attendance values are removed and reported.
 
