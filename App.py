@@ -139,7 +139,19 @@ if "cleaning_report" in st.session_state:
 
         c7.metric("Valid Attendance", report["attendance_after"])
         c8.metric("Invalid Attendance Removed", report["invalid_attendance"])
-        
+
+    st.divider()
+    
+    st.markdown("### 💾 Export Data")
+    csv_data = st.session_state.long_df.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Download Cleaned Data (CSV)",
+        data=csv_data,
+        file_name='cleaned_student_data.csv',
+        mime='text/csv',
+        help="Download the normalized, long-format data ready for analysis."
+    )
+
 st.divider()
 st.markdown(
     "<p style='text-align: center; color: gray;'>Data processed for summary</p>",
