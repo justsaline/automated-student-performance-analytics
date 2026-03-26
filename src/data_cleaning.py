@@ -1,5 +1,5 @@
 import pandas as pd
-from src.schema import ID_COLUMNS, COLUMN_ALIASES, MARKS_MIN, MARKS_MAX, ATTENDANCE_MIN, ATTENDANCE_MAX
+from src.schema import ID_COLUMNS, COLUMN_ALIASES, MARKS_MIN, ATTENDANCE_MIN, ATTENDANCE_MAX
 
 def load_data(uploaded_file):
     if uploaded_file is None:
@@ -65,12 +65,12 @@ def reshape_wide_to_long(df, subject_columns):
     return long_df
 
 # Clean marks column to ensrure numeric values only and count the chnages
-def clean_marks(df):
+def clean_marks(df, marks_range):
     df = df.copy()
     
     before_count = df['marks'].notna().sum()
     df['marks'] = df['marks'].astype(str).str.extract(r'(\d+\.?\d*)', expand = False).astype('Float64')
-    df.loc[~df['marks'].between(MARKS_MIN, MARKS_MAX),'marks'] = pd.NA
+    df.loc[~df['marks'].between(MARKS_MIN, marks_range),'marks'] = pd.NA
     after_count = df['marks'].notna().sum()
     
     result = {'marks_before': before_count, 'marks_after': after_count, 'invalid_marks': before_count - after_count}
@@ -124,7 +124,7 @@ def drop_invalid_rows(df):
     return df, result
 
 # Main function deciding mode and applying data cleaning steps in order
-def clean_data(df, mode = "auto", manual_mapping = None, subject_columns = None):
+def clean_data(df, mode = "auto", manual_mapping = None, subject_columns = None, marks_range=None):
     
     df = df.copy()
     
@@ -144,7 +144,7 @@ def clean_data(df, mode = "auto", manual_mapping = None, subject_columns = None)
         raise ValueError("Mode must be either 'auto' or 'manual'.")
     
     df = reshape_wide_to_long(df, subject_columns)
-    df, marks_report = clean_marks(df)
+    df, marks_report = clean_marks(df, marks_range)
     report.update(marks_report)
     df, attendance_report = clean_attendance(df)
     report.update(attendance_report)

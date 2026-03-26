@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from src.data_cleaning import load_data, clean_data
-from src.schema import ID_COLUMNS
+from src.schema import ID_COLUMNS, MARKS_MAX
 
 
 st.set_page_config(page_title="Automated Student Performance Analysis", layout="wide")
@@ -52,6 +52,9 @@ if mode == "manual":
         "Only map what exists in your file."
     )
     
+    marks_range = st.number_input(
+        "Enter maximum marks for validation:")
+
     manual_mapping = {}
     current_id_selections = {
         col: st.session_state.get(f"map_{col}", "-- Not Present --")
@@ -100,11 +103,11 @@ run_cleaning = st.button("🚀 Run Data Cleaning")
 if run_cleaning:
     try:
         if mode == "auto":
-            cleaned_df, report = clean_data(raw_df, mode = "auto")
+            cleaned_df, report = clean_data(raw_df, mode = "auto", marks_range = MARKS_MAX)
         else:
             cleaned_df, report = clean_data(raw_df, mode = "manual",
                                             manual_mapping = manual_mapping,
-                                            subject_columns = subject_columns)
+                                            subject_columns = subject_columns, marks_range = marks_range)
             
     except Exception as e:
         st.error(str(e))

@@ -3,7 +3,6 @@ import streamlit as st
 
 from src.analytics import (
     student_overview,
-    student_subject_analysis,
     student_strengths_weaknesses,
 )
 
@@ -74,7 +73,8 @@ perf_dict = student_strengths_weaknesses(student_df, selected_reg_no)
 
 c1, c2, c3 = st.columns(3)
 
-c1.metric("Average Marks", f"{overview['avg_marks']:.2f}")
+avg_marks = overview['avg_marks']
+c1.metric("Average Marks", f"{avg_marks:.2f}" if avg_marks is not None and not pd.isna(avg_marks) else "N/A")   
 c2.metric("Overall Attendance",attendance_display)
 c3.metric("Subjects Taken", overview["subjects_taken"])
 
@@ -85,8 +85,11 @@ st.caption(f"Showing performance for: {selected_term}")
 
 col1, col2 = st.columns([2, 1])
 with col1:
-    bar_chart = student_subject_marks_bar(student_perf)
-    st.plotly_chart(bar_chart, width = "stretch")
+    if student_perf.empty or student_perf['marks'].isna().all():
+        st.info("No mark data available for this student.")
+    else:
+        bar_chart = student_subject_marks_bar(student_perf)
+        st.plotly_chart(bar_chart, width = "stretch")
 with col2:
     with st.expander("ℹ️ About Subject Marks Bar Chart", expanded=True):
         st.markdown(
@@ -124,8 +127,11 @@ range_summary.columns = ["Marks Range", "Subjects", "Count"]
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    dist_fig = student_marks_distribution(student_perf)
-    st.plotly_chart(dist_fig, width="stretch")
+    if student_perf.empty or student_perf['marks'].isna().all():
+        st.info("No mark data available for this student.")
+    else:
+        dist_fig = student_marks_distribution(student_perf)
+        st.plotly_chart(dist_fig, width="stretch")
 
 with col2:
     with st.expander("📌 Marks Range Summary", expanded=True):
@@ -151,17 +157,22 @@ total_subjects = (
 strong = len(perf_dict["strengths"])
 weak = len(perf_dict["weaknesses"])
 
-if strong / total_subjects >= 0.6:
+if total_subjects == 0:
+    insight = "⚪ No subject data available for this student."
+elif strong / total_subjects >= 0.6:
     insight = "🟢 The student shows strong overall performance across most subjects."
 elif weak / total_subjects >= 0.4:
     insight = "🔴 The student has multiple weak-performing subjects and may need support."
 else:
-    insight = "🟡 The student’s performance is mixed across subjects."
-
+    insight = "🟡 The student's performance is mixed across subjects."
+    
 st.info(insight)
 
-perf_fig = performance_category_donut(perf_dict)
-st.plotly_chart(perf_fig, width="stretch")
+if student_perf.empty or student_perf['marks'].isna().all():
+    st.info("No mark data available for this student.")
+else:
+    perf_fig = performance_category_donut(perf_dict)
+    st.plotly_chart(perf_fig, width="stretch")
 
 st.divider()
 with st.expander("📄 Show Full Student Details"):
