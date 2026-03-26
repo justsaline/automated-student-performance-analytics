@@ -31,25 +31,23 @@ def at_risk_students(df,PASS_MARK,attendance_threshold=75):
     return at_risk
 
 def rank_students(df):
-    
     summary = student_summary(df)
-    
     total_subjects = df['subject'].nunique()
-    total_terms = df['term'].nunique()
-    
-    expected_rows = total_subjects * total_terms
-    
-    valid_counts = (
+
+    subject_counts = (
         df.dropna(subset=['marks'])
-          .groupby('reg_no')
-          .size()
+        .groupby('reg_no')['subject']
+        .nunique()
     )
-    complete_students = valid_counts[valid_counts == expected_rows].index
+
+    complete_students = subject_counts[subject_counts == total_subjects].index
     summary = summary[summary['reg_no'].isin(complete_students)]
+
     summary['rank'] = summary['avg_marks'].rank(
         ascending=False,
         method='dense'
     ).astype(int)
+
     return summary.sort_values('rank')
 
 

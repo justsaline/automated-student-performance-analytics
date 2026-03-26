@@ -104,6 +104,13 @@ def clean_attendance(df):
 def drop_invalid_rows(df):
     df = df.copy()
     
+    conflict_check = df.groupby('reg_no')['student_name'].nunique()
+    conflicts = conflict_check[conflict_check > 1].index.tolist()
+    if conflicts:
+        raise ValueError(
+            f"Data error: Registration number(s) {', '.join(str(c) for c in conflicts)} "
+            f"are linked to multiple student names. Please fix your data before uploading."
+        )
     before_rows = len(df)
     df = df.dropna(subset = ['reg_no', 'subject'])
     df = df[~(df['marks'].isna() & df['attendance'].isna())]

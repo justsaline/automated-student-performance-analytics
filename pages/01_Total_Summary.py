@@ -25,6 +25,9 @@ if not st.session_state.get("data_ready", False):
     st.stop()
     
 filtered_df = st.session_state.long_df
+if filtered_df.empty:
+    st.warning("No data found for the selected filter. Try a different combination.")
+    st.stop()
 
 groupable_columns = [
     col for col in filtered_df.columns

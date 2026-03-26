@@ -109,9 +109,8 @@ if mode == "manual":
     if not manual_mapping or not subject_columns:
         st.warning("Manual mode requires column mapping and subject selection.")
 
-st.divider()
-
 run_cleaning = st.button("🚀 Run Data Cleaning")
+st.divider()
 
 if run_cleaning:
     try:
