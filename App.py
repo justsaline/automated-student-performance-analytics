@@ -1,10 +1,19 @@
 import streamlit as st
 import pandas as pd
 from src.data_cleaning import load_data, clean_data
-from src.schema import ID_COLUMNS, MARKS_MAX
+from src.schema import ID_COLUMNS, MARKS_MAX, PASS_MARK
 
-
-st.set_page_config(page_title="Automated Student Performance Analysis", layout="wide")
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&display=swap');
+    p, h1, h2, h3, h4, h5, h6, label, button, input, textarea, 
+    .stMarkdown, .stText, .stTitle, .stHeader, .stSubheader,
+    .stRadio, .stSelectbox, .stMultiSelect, .stNumberInput,
+    .stDataFrame, .stMetric, .stExpander {
+        font-family: 'Outfit', sans-serif !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("🎓 Automated Student Performance Analysis")
 st.caption("Upload student data to begin analysis.")
@@ -43,6 +52,8 @@ mode = mode.lower()
 
 manual_mapping = None
 subject_columns = None
+pass_mark = PASS_MARK
+attendance_threshold = 75
 
 if mode == "manual":
     st.markdown("### 🧩 Manual Column Mapping")
@@ -54,6 +65,8 @@ if mode == "manual":
     
     marks_range = st.number_input(
         "Enter maximum marks for validation:")
+    pass_mark = st.number_input("Pass mark", min_value=1, value=PASS_MARK)
+    attendance_threshold = st.number_input("Attendance threshold (%)", min_value=1, max_value=100, value=75)
 
     manual_mapping = {}
     current_id_selections = {
@@ -116,46 +129,91 @@ if run_cleaning:
     st.session_state.long_df = cleaned_df
     st.session_state.cleaning_report = report
     st.session_state.data_ready = True
+    st.session_state.pass_mark = pass_mark
+    st.session_state.attendance_threshold = attendance_threshold
     st.success("Data Cleaned Successfully")
 
 if "cleaning_report" in st.session_state:
     report = st.session_state.cleaning_report
 
+    rows_before = report["rows_before"]
+    rows_after = report["rows_after"]
+    rows_dropped = report["rows_dropped"]
+    marks_after = report["marks_after"]
+    invalid_marks = report["invalid_marks"]
+    duplicate_rows = report["duplicate_rows_detected"]
+    attendance_after = report["attendance_after"]
+    invalid_attendance = report["invalid_attendance"]
+
+    total_marks = marks_after + invalid_marks
+    marks_pct = round((marks_after / total_marks * 100)) if total_marks > 0 else 0
+    invalid_marks_pct = round((invalid_marks / total_marks * 100)) if total_marks > 0 else 0
+    rows_dropped_pct = round((rows_dropped / rows_before * 100), 1) if rows_before > 0 else 0
+    rows_retained_pct = round((rows_after / rows_before * 100)) if rows_before > 0 else 0
+
     with st.expander("🧹 Data Cleaning Summary", expanded=True):
-        c1, c2, c3 = st.columns(3)
+        st.markdown(f"""
+        <style>
+        .section-label {{ font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-tertiary); margin: 0 0 10px; }}
+        .stat-card {{ background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px 16px; }}
+        .stat-val {{ font-size: 26px; font-weight: 500; color: var(--color-text-primary); margin: 2px 0 0; line-height: 1.1; }}
+        .stat-label {{ font-size: 12px; color: var(--color-text-secondary); margin: 0; }}
+        .bar-bg {{ height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 10px; overflow: hidden; }}
+        .bar-fill {{ height: 6px; border-radius: 3px; }}
+        .badge {{ display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; margin-top: 6px; }}
+        .grid3 {{ display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }}
+        .grid2 {{ display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }}
+        </style>
 
-        c1.metric("Rows Before", report["rows_before"])
-        c2.metric("Rows After", report["rows_after"])
-        c3.metric("Rows Dropped", report["rows_dropped"])
+        <div style="background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; padding: 20px 22px;">
 
-        st.divider()
+          <p class="section-label">Row overview</p>
+          <div class="grid3" style="margin-bottom:16px;">
+            <div class="stat-card">
+              <p class="stat-label">Rows before</p>
+              <p class="stat-val">{rows_before:,}</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Rows after</p>
+              <p class="stat-val" style="color:var(--color-text-success)">{rows_after:,}</p>
+              <div class="bar-bg"><div class="bar-fill" style="width:{rows_retained_pct}%;background:#639922"></div></div>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Rows dropped</p>
+              <p class="stat-val" style="color:var(--color-text-danger)">{rows_dropped:,}</p>
+              <span class="badge" style="background:#FCEBEB;color:#A32D2D;">{rows_dropped_pct}% of total</span>
+            </div>
+          </div>
 
-        c4, c5, c6 = st.columns(3)
+          <p class="section-label">Marks</p>
+          <div class="grid2" style="margin-bottom:16px;">
+            <div class="stat-card">
+              <p class="stat-label">Valid marks</p>
+              <p class="stat-val" style="color:var(--color-text-success)">{marks_after:,}</p>
+              <div class="bar-bg"><div class="bar-fill" style="width:{marks_pct}%;background:#639922"></div></div>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Invalid removed</p>
+              <p class="stat-val" style="color:var(--color-text-danger)">{invalid_marks:,}</p>
+              <span class="badge" style="background:#FCEBEB;color:#A32D2D;">{invalid_marks_pct}% of entries</span>
+            </div>
+          </div>
 
-        c4.metric("Valid Marks", report["marks_after"])
-        c5.metric("Invalid Marks Removed", report["invalid_marks"])
-        c6.metric("Duplicate Rows Found", report["duplicate_rows_detected"])
+          <p class="section-label">Attendance & duplicates</p>
+          <div class="grid3">
+            <div class="stat-card">
+              <p class="stat-label">Valid attendance</p>
+              <p class="stat-val" style="color:var(--color-text-success)">{attendance_after:,}</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Invalid removed</p>
+              <p class="stat-val" style="color:var(--color-text-danger)">{invalid_attendance:,}</p>
+            </div>
+            <div class="stat-card">
+              <p class="stat-label">Duplicates found</p>
+              <p class="stat-val" style="color:var(--color-text-warning)">{duplicate_rows:,}</p>
+            </div>
+          </div>
 
-        st.divider()
-
-        c7, c8 = st.columns(2)
-
-        c7.metric("Valid Attendance", report["attendance_after"])
-        c8.metric("Invalid Attendance Removed", report["invalid_attendance"])
-
-    st.divider()
-    
-    st.markdown("### 💾 Export Data")
-    csv_data = st.session_state.long_df.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Download Cleaned Data (CSV)",
-        data=csv_data,
-        file_name='cleaned_student_data.csv',
-        mime='text/csv',
-        help="Download the normalized, long-format data ready for analysis."
-    )
-
-st.divider()
-st.markdown(
-    "<p style='text-align: center; color: gray;'>Data processed for summary</p>",
-    unsafe_allow_html=True)
+        </div>
+        """, unsafe_allow_html=True)

@@ -6,6 +6,17 @@ from src.schema import PASS_MARK
 st.set_page_config(
     page_title="Total Summary",
     layout="wide")
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&display=swap');
+    p, h1, h2, h3, h4, h5, h6, label, button, input, textarea, 
+    .stMarkdown, .stText, .stTitle, .stHeader, .stSubheader,
+    .stRadio, .stSelectbox, .stMultiSelect, .stNumberInput,
+    .stDataFrame, .stMetric, .stExpander {
+        font-family: 'Outfit', sans-serif !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("📊 Total Summary")
 
@@ -114,14 +125,16 @@ with st.expander("📋 View Full Student Rankings"):
         height=400
     )
 
-at_risk_df = at_risk_students(filtered_df, PASS_MARK).reset_index()
+pass_mark = st.session_state.get("pass_mark", PASS_MARK)
+attendance_threshold = st.session_state.get("attendance_threshold", 75)
+at_risk_df = at_risk_students(filtered_df, pass_mark,attendance_threshold).reset_index()
 
 st.divider()
 
 st.subheader("⚠️ At-Risk Students")
 st.write("Students At Risk: ", len(at_risk_df))
 if not at_risk_df.empty:
-    fig = at_risk_scatter(at_risk_df)
+    fig = at_risk_scatter(at_risk_df, pass_mark=pass_mark,attendance_threshold=attendance_threshold)
     st.plotly_chart(fig, width="stretch")
     with st.expander("📋 View At-Risk Students Details"):
         st.caption("Students listed below have been identified as at-risk based on low average marks or attendance.")

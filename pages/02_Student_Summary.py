@@ -6,6 +6,8 @@ from src.analytics import (
     student_strengths_weaknesses,
 )
 
+from src.schema import PASS_MARK
+from src.schema import PASS_MARK
 from src.visualizations import (
     student_subject_marks_bar,
     student_marks_distribution,
@@ -13,6 +15,17 @@ from src.visualizations import (
 )
 
 st.set_page_config(page_title="Student Summary", layout="wide")
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&display=swap');
+    p, h1, h2, h3, h4, h5, h6, label, button, input, textarea, 
+    .stMarkdown, .stText, .stTitle, .stHeader, .stSubheader,
+    .stRadio, .stSelectbox, .stMultiSelect, .stNumberInput,
+    .stDataFrame, .stMetric, .stExpander {
+        font-family: 'Outfit', sans-serif !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("👤 Student Summary")
 
@@ -130,7 +143,8 @@ with col1:
     if student_perf.empty or student_perf['marks'].isna().all():
         st.info("No mark data available for this student.")
     else:
-        dist_fig = student_marks_distribution(student_perf)
+        pass_mark = st.session_state.get("pass_mark", PASS_MARK)
+        dist_fig = student_marks_distribution(student_perf, pass_mark=pass_mark)
         st.plotly_chart(dist_fig, width="stretch")
 
 with col2:

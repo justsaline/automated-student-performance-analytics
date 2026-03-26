@@ -1,6 +1,6 @@
 import pandas as pd
 import plotly.express as px
-from src.schema import MARKS_MIN, MARKS_MAX,ATTENDANCE_MIN, ATTENDANCE_MAX,PASS_MARK
+from src.schema import MARKS_MIN, MARKS_MAX,ATTENDANCE_MIN, ATTENDANCE_MAX
 
 def student_subject_marks_bar(student_subject_df):
     fig = px.bar(student_subject_df, x='subject', y='marks',
@@ -13,7 +13,7 @@ def student_subject_marks_bar(student_subject_df):
     fig.update_layout(yaxis_range = [0,100], showlegend = False)
     return fig
 
-def student_marks_distribution(student_subject_df):
+def student_marks_distribution(student_subject_df,pass_mark=35):
     fig = px.histogram(
         student_subject_df,
         x="marks",
@@ -23,10 +23,10 @@ def student_marks_distribution(student_subject_df):
     )
 
     fig.add_vline(
-        x=PASS_MARK,
+        x=pass_mark,
         line_dash="dash",
         line_color="red",
-        annotation_text=f"Pass Mark ({PASS_MARK})",
+        annotation_text=f"Pass Mark ({pass_mark})",
         annotation_position="top"
     )
 
@@ -124,7 +124,7 @@ def top_students_bar(rank_df, top_n=10):
 
     return fig
     
-def at_risk_scatter(at_risk_df, attendance_threshold = 75):
+def at_risk_scatter(at_risk_df,pass_mark=35, attendance_threshold = 75):
     fig = px.scatter(at_risk_df, x='avg_attendance', y='avg_marks',
                     hover_data=['student_name', 'reg_no'],
                     labels={
@@ -140,10 +140,10 @@ def at_risk_scatter(at_risk_df, attendance_threshold = 75):
     annotation_position="top right"
     )
     fig.add_hline(
-    y=PASS_MARK,
+    y=pass_mark,
     line_dash="dash",
     line_color="red",
-    annotation_text=f"Passing Mark ({PASS_MARK})",
+    annotation_text=f"Passing Mark ({pass_mark})",
     annotation_position="top right"
     )
 
