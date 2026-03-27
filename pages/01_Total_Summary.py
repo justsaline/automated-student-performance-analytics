@@ -2,23 +2,20 @@ import streamlit as st
 from src.analytics import rank_students, at_risk_students, subject_summary
 from src.visualizations import subject_performance_heatmap, top_students_bar, at_risk_scatter
 from src.schema import PASS_MARK
+from src.ui_components import inject_font, page_header, render_sidebar
 
 st.set_page_config(
-    page_title="Total Summary",
-    layout="wide")
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&display=swap');
-    p, h1, h2, h3, h4, h5, h6, label, button, input, textarea, 
-    .stMarkdown, .stText, .stTitle, .stHeader, .stSubheader,
-    .stRadio, .stSelectbox, .stMultiSelect, .stNumberInput,
-    .stDataFrame, .stMetric, .stExpander {
-        font-family: 'Outfit', sans-serif !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("📊 Total Summary")
+    page_title="Lume/Total Summary",
+    page_icon="assets/icon.png",
+    layout="wide"
+)
+side_context = render_sidebar()
+inject_font()
+page_header(
+    label="Academic Analytics",
+    title="Total Summary",
+    subtitle="Cohort-level performance overview across all students and subjects."
+)
 
 if not st.session_state.get("data_ready", False):
     st.warning("Please upload and process data on the main page first.")
@@ -35,44 +32,72 @@ groupable_columns = [
 ]
 
 st.divider()
-st.subheader("🎛️ Filter Cohort")
+st.markdown("### 🎛️ Filter Cohort")
 
-colA, colB = st.columns(2)
-
-with colA:
-    group_by = st.selectbox(
-        "Group By",
-        options=["All"] + groupable_columns
+with st.container(border=True):
+    st.caption(
+        "This page provides a high-level overview of student performance across the entire dataset, "
+        "highlighting academic trends, attendance patterns, and overall rankings. Attendance is recorded "
+        "at student level and is uniform across subjects in this dataset."
     )
+    
+    st.markdown("<br>", unsafe_allow_html=True)
 
-filtered_df = filtered_df.copy()
+    col1, col2, col3 = st.columns([1, 1, 2])
 
-if group_by != "All":
-    with colB:
-        selected_value = st.selectbox(
-            f"Select {group_by}",
-            options=sorted(filtered_df[group_by].dropna().unique())
+    with col1:
+        group_by = st.selectbox(
+            "Group By",
+            options=["All"] + groupable_columns,
+            key="total_group_by"
         )
 
-    filtered_df = filtered_df[filtered_df[group_by] == selected_value]
+    filtered_df = st.session_state.long_df.copy()
 
-total_students = filtered_df['reg_no'].nunique()
-avg_marks = filtered_df['marks'].mean()
-avg_attendance = filtered_df['attendance'].mean()
+    with col2:
+        if group_by != "All":
+            options_list = sorted(filtered_df[group_by].dropna().unique())
+            selected_value = st.selectbox(
+                f"Select specific {group_by}",
+                options=options_list,
+                key="total_group_value"
+            )
+            if selected_value in options_list:
+                filtered_df = filtered_df[filtered_df[group_by] == selected_value]
+            else:
+                selected_value = "All Terms"
+        else:
+            st.selectbox("Select specific group", ["Not applicable"], disabled=True)
+            selected_value = "All Terms"
 
-st.caption(
-    "This page provides a high-level overview of student performance across the entire dataset, "
-    "highlighting academic trends, attendance patterns, and overall rankings. Attendance is recorded at student level and is uniform across subjects in this dataset.")
+    with side_context:
+        if 'long_df' in st.session_state:
+            st.markdown("### SYSTEM CONTEXT")
+            with st.container(border=True):
+                st.markdown(f"**Students:** `{filtered_df['reg_no'].nunique()}`")
+                st.markdown(f"**Total Records:** `{len(filtered_df)}`")
+                st.markdown(f"**Active Group:** `{group_by}`")
+                st.markdown(f"**Active Term:** `{selected_value}`")
+    total_students = filtered_df['reg_no'].nunique()
+    avg_marks = filtered_df['marks'].mean()
+    avg_attendance = filtered_df['attendance'].mean()
 
-c1,c2,c3 = st.columns(3)
+st.markdown("### 📌 Cohort Overview")
+st.caption("These metrics summarize the overall academic and attendance performance of all students in the dataset.")
 
-c1.metric("Total Students", total_students)
-c2.metric("Average Marks", f"{avg_marks: .2f}")
-c3.metric("Average Attendance", f"{avg_attendance: .2f}")
+c1, c2, c3 = st.columns(3)
 
-st.markdown(
-    "### 📌 Cohort Overview\n"
-    "These metrics summarize the overall academic and attendance performance of all students in the dataset.")
+with c1:
+    with st.container(border=True):
+        st.metric("Total Students", total_students)
+
+with c2:
+    with st.container(border=True):
+        st.metric("Average Marks", f"{avg_marks:.2f}")
+
+with c3:
+    with st.container(border=True):
+        st.metric("Average Attendance", f"{avg_attendance:.2f}%")
 
 
 st.divider()
@@ -82,50 +107,72 @@ if group_by != "All":
 else:
     st.info("Showing results for entire dataset")
 
-st.subheader("📚 Subject-wise performance Distribution")
+st.markdown("### 📚 Subject-wise Performance Distribution")
 
-col1, col2 = st.columns([2, 1])
-with col1:
+col_chart, col_table = st.columns([6, 4], gap="large")
+
+with col_chart:
     heatmap_fig = subject_performance_heatmap(filtered_df)
-    st.plotly_chart(heatmap_fig, width="stretch")
-    sub_df = subject_summary(filtered_df)
-with col2:
-    with st.expander("ℹ️ About Subject Summary Table", expanded=True):
-        st.markdown(
+    heatmap_fig.update_layout(coloraxis_showscale=False, title_text="")
+    st.plotly_chart(heatmap_fig, use_container_width=True)
+
+with col_table:
+    with st.container(border=True):
+        st.markdown("**ℹ️ About Subject Summary**")
+        st.caption(
             "This table summarizes the number of students and average marks for each subject. "
             "It helps identify subjects with high or low performance across the cohort."
         )
+        
+        sub_df = subject_summary(filtered_df)
+        display_sub_df = sub_df[["subject", "students", "avg_marks"]].copy()
+        display_sub_df["avg_marks"] = display_sub_df["avg_marks"].round(2)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
         st.dataframe(
-            sub_df[["subject", "students","avg_marks"]], width="stretch", hide_index=True
+            display_sub_df,
+            use_container_width=True,
+            hide_index=True
         )
 
 st.divider()
 
-st.subheader("🏆 Top Ranked Students")
-st.caption(
-    "Ranks are computed using dense ranking, so students with the same average marks share the same rank.")
+st.markdown("### 🏆 Top Ranked Students")
+st.caption("Ranks are computed using dense ranking, so students with the same average marks share the same rank.")
 
 rank_df = rank_students(filtered_df)
 top_df = rank_df.head(10)
 
-col3, col4 = st.columns([2, 1])
-with col3:
-    fig = top_students_bar(rank_df, top_n=10)
-    st.plotly_chart(fig, width="stretch")
-with col4:
-    with st.expander("ℹ️ List of Top Students", expanded=True):
-        st.dataframe(
-            top_df[["rank", "reg_no", "student_name", "avg_marks"]],
-            width="stretch", height = 300, hide_index=True
-        )
+tab_top10, tab_full = st.tabs(["📊 Top 10 Overview", "📋 Full Cohort Rankings"])
 
-with st.expander("📋 View Full Student Rankings"):
+with tab_top10:
+    col_chart, col_table = st.columns([6, 4], gap="large")
+    
+    with col_chart:
+        fig = top_students_bar(rank_df, top_n=10)
+        fig.update_layout(coloraxis_showscale=False) 
+        st.plotly_chart(fig, use_container_width=True)
+        
+    with col_table:
+        with st.container(border=True):
+            st.markdown("**ℹ️ Top 10 List**")
+            
+            display_df = top_df[["rank", "reg_no", "student_name", "avg_marks"]].copy()
+            display_df["avg_marks"] = display_df["avg_marks"].round(2)
+            
+            st.dataframe(
+                display_df,
+                use_container_width=True, 
+                height=350, 
+                hide_index=True
+            )
+
+with tab_full:
     st.dataframe(
-        rank_df[
-            ["rank", "reg_no", "student_name", "avg_marks", "avg_attendance"]
-        ],
-        width="stretch",
-        height=400
+        rank_df[["rank", "reg_no", "student_name", "avg_marks", "avg_attendance"]],
+        use_container_width=True,
+        height=500,
+        hide_index=True
     )
 
 pass_mark = st.session_state.get("pass_mark", PASS_MARK)
@@ -134,18 +181,28 @@ at_risk_df = at_risk_students(filtered_df, pass_mark,attendance_threshold).reset
 
 st.divider()
 
-st.subheader("⚠️ At-Risk Students")
-st.write("Students At Risk: ", len(at_risk_df))
+st.markdown("### ⚠️ At-Risk Students")
+st.markdown(f"**Students At Risk:** `{len(at_risk_df)}`")
+
 if not at_risk_df.empty:
-    fig = at_risk_scatter(at_risk_df, pass_mark=pass_mark,attendance_threshold=attendance_threshold)
-    st.plotly_chart(fig, width="stretch")
-    with st.expander("📋 View At-Risk Students Details"):
+    tab_chart, tab_table = st.tabs(["📈 Visualization", "📋 Detailed List"])
+    
+    with tab_chart:
+        fig = at_risk_scatter(at_risk_df, pass_mark=pass_mark, attendance_threshold=attendance_threshold)
+        fig.update_layout(title_text="")
+        st.plotly_chart(fig, use_container_width=True)
+        
+    with tab_table:
         st.caption("Students listed below have been identified as at-risk based on low average marks or attendance.")
+        
+        display_risk_df = at_risk_df[["reg_no", "student_name", "avg_marks", "avg_attendance"]].copy()
+        display_risk_df["avg_marks"] = display_risk_df["avg_marks"].round(2)
+        display_risk_df["avg_attendance"] = display_risk_df["avg_attendance"].round(2)
+        
         st.dataframe(
-            at_risk_df[
-                ["reg_no", "student_name", "avg_marks", "avg_attendance"]
-            ],
-            width="stretch"
+            display_risk_df,
+            use_container_width=True,
+            hide_index=True
         )
 else:
     st.success("No at-risk students detected.")
