@@ -6,7 +6,7 @@ def student_subject_marks_bar(student_subject_df):
     fig = px.bar(student_subject_df, x='subject', y='marks',
                  text='marks', title = 'Student Subject Marks',
                  labels = {'marks': 'Marks', 'subject': 'Subject'},
-                 color = 'subject')
+                 color='subject')
     
     fig.update_traces(texttemplate="%{text:.2f}")
     fig.update_traces(textposition='outside')
@@ -93,7 +93,7 @@ def subject_performance_heatmap(cleaned_df):
         pivot_df,
         text_auto=True,
         aspect="auto",
-        color_continuous_scale="Viridis",
+        color_continuous_scale="matter",
         labels={
             "x": "Subject",
             "y": "Score Range",
@@ -131,7 +131,8 @@ def at_risk_scatter(at_risk_df,pass_mark=35, attendance_threshold = 75):
                     "avg_attendance": "Average Attendance (%)",
                     "avg_marks": "Average Marks"
                     },
-                    title="At-Risk Students: Marks vs Attendance")
+                    title="At-Risk Students: Marks vs Attendance",
+                    color_discrete_sequence=["#E05C5C"])
     fig.add_vline(
     x=attendance_threshold,
     line_dash="dash",

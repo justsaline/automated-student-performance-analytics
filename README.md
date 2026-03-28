@@ -1,304 +1,204 @@
-# Automated Student Performance Analysis
+# LUME — Academic Intelligence Engine
 
-## Introduction
-
-The Automated Student Performance Analysis system is a web-based analytical application developed using Streamlit and Python. The objective of this project is to provide an end-to-end data processing and analysis pipeline for academic datasets that are often inconsistent, manually maintained, and structurally ambiguous.
-
-Educational institutions frequently store student records in spreadsheet format with varying column names, inconsistent attendance formats, embedded text inside numeric fields, and duplicate records. These inconsistencies make analytical reporting difficult and error-prone. This application addresses those challenges by standardizing, validating, restructuring, and analyzing raw student performance data through a reproducible and transparent pipeline.
-
-The system is modular in design and separates responsibilities into data loading, cleaning, analytics computation, and visualization layers.
+> A modular, dark-themed academic analytics platform built with Python and Streamlit. LUME transforms messy, inconsistently formatted student spreadsheets into clean, actionable performance insights.
 
 ---
 
-## Application Preview
+## Preview
 
-The following screenshots demonstrate the interactive dashboard interface of the system.
+![LUME Demo](assets/demo.gif)
 
-### Cohort-Level Dashboard (Total Summary with Filtering)
-
-<img src="assets/total_summary.png" width="100%"/>
-
-This dashboard provides a high-level overview of student performance across the dataset.  
-It includes cohort filtering, aggregate performance metrics, subject-wise heatmap visualization, ranking analysis, and at-risk student detection.
+| Total Summary | Student Summary |
+|---|---|
+| ![Total Summary](assets/total_summary.png) | ![Student Summary](assets/student_summary.png) |
 
 ---
 
-### Individual-Level Dashboard (Student Summary)
+## Overview
 
-<img src="assets/student_summary.png" width="100%"/>
+Educational institutions frequently store student records in spreadsheet format with varying column names, inconsistent attendance formats, embedded text inside numeric fields, and duplicate records. LUME addresses these challenges through an automated data cleaning pipeline and an interactive multi-page dashboard.
 
-This dashboard provides detailed academic insights for a selected student, including subject-wise marks visualization, performance categorization, distribution analysis, and full academic record display.
+The system is modular in design, separating responsibilities into data loading, cleaning, analytics computation, visualization, and UI layers.
+
+---
+
+## Application Pages
+
+### App — Data Upload & Cleaning
+
+The entry point for uploading and processing student data. Supports CSV and Excel files. Includes an auto mode for standard datasets and a manual mapping mode for non-standard column structures with configurable validation thresholds.
+
+### Total Summary — Cohort Analytics
+
+Cohort-level overview including subject-wise performance heatmap, top ranked students, at-risk detection, and dynamic cohort filtering by class, term, or any available attribute.
+
+### Student Summary — Individual Analytics
+
+Per-student deep dive including subject-wise marks, marks distribution, performance categorization (strengths, average, weaknesses), and a full academic record view.
+
+### About — System Documentation
+
+Technical documentation covering system architecture, data requirements, processing logic, and navigation guide.
 
 ---
 
 ## System Architecture
+```
+Automated-student-performance-analysis/
+├── App.py                      # Entry point — upload, clean, configure
+├── pages/
+│   ├── 01_Total_Summary.py     # Cohort-level dashboard
+│   ├── 02_Student_Summary.py   # Individual student dashboard
+│   └── About.py                # Technical documentation
+├── src/
+│   ├── analytics.py            # Aggregation, ranking, risk detection
+│   ├── data_cleaning.py        # Preprocessing & validation pipeline
+│   ├── schema.py               # Canonical schema & system constants
+│   ├── ui_components.py        # Reusable UI component library
+│   └── visualizations.py      # Plotly-based chart generation
+├── data/
+│   ├── raw/                    # Sample raw datasets
+│   └── processed/              # Sample cleaned output
+├── assets/                     # Logos, screenshots
+└── .streamlit/
+```
 
-### System Workflow Diagram
-
-<p align="center">
-  <img src="assets/system_architecture.png" width = "90%"/>
-</p>
-
-The diagram above illustrates the end-to-end flow of the application, 
-starting from user data upload to insight generation.
-
-
-The application is structured as a multi-page Streamlit application with modular backend components:
-
-### Core Modules
+### Core Module Responsibilities
 
 | Module | Responsibility |
-|--------|---------------|
-| `app.py` | File upload & cleaning execution |
-| `data_cleaning.py` | Preprocessing & validation pipeline |
-| `analytics.py` | Aggregation, ranking & risk detection |
-| `visualizations.py` | Plotly-based chart generation |
-| `schema.py` | Canonical schema & system constants |
-| `01_Total_Summary.py` | Cohort-level dashboard |
-| `02_Student_Summary.py` | Individual student dashboard |
-
-
-This separation ensures maintainability, scalability, and clarity of logic.
+|---|---|
+| `App.py` | File upload, cleaning execution, session state management |
+| `data_cleaning.py` | Full preprocessing pipeline — normalization, reshaping, validation |
+| `analytics.py` | Student/subject summaries, ranking, at-risk detection |
+| `visualizations.py` | All Plotly chart generation |
+| `schema.py` | Canonical column names, aliases, and system constants |
+| `ui_components.py` | Reusable `inject_font()`, `page_header()`, `section_header()`, `render_sidebar()` |
 
 ---
 
 ## Input Data Requirements
 
-The system accepts the following file formats:
+LUME accepts CSV (`.csv`) and Excel (`.xlsx`) files. The uploaded file must contain student-level data in wide format, where each row represents a student and each subject is a separate column.
 
-- CSV (.csv)
-- Excel (.xlsx)
-
-The uploaded file must contain student-level data in wide format, where each row represents a student and each subject is represented as a separate column containing marks.
-
-A typical dataset structure is as follows:
+A typical dataset structure:
 
 | Reg No | Student Name | Class | Term | Attendance | Math | Physics | Chemistry |
-|--------|-------------|-------|------|------------|------|---------|----------|
+|---|---|---|---|---|---|---|---|
 
-The system expects identification-related columns along with subject columns containing marks.
-
----
-
-## Canonical Schema Assumptions
-
-Internally, the application standardizes all data into a canonical structure to ensure consistent processing. The expected identification columns are:
-
-- reg_no  
-- student_name  
-- class  
-- term  
-- attendance  
-
-Subject columns are automatically identified or manually selected and later transformed into two analytical columns:
-
-- subject  
-- marks  
-
-After preprocessing, the dataset is reshaped into long format, where each row represents a single (student, subject) record. This format enables grouping, aggregation, ranking, and visualization.
+Identification columns are auto-detected via alias matching. Subject columns are inferred automatically or selected manually.
 
 ---
 
-## Data Cleaning and Preprocessing Pipeline
+## Data Cleaning Pipeline
 
-The cleaning pipeline is executed sequentially and is fully automated unless manual mapping is selected.
+The pipeline executes sequentially and is fully automated in auto mode.
 
 ### Column Normalization
 
-In automatic mode, column names are standardized by converting them to lowercase, trimming whitespace, and resolving naming inconsistencies using an alias mapping system. For example, variations such as “Roll No”, “Registration Number”, or “Roll Number” are mapped to the canonical column name `reg_no`. This reduces dependency on strict column naming conventions.
-
-If the automatic detection does not correctly interpret the dataset, manual mode allows users to explicitly map dataset columns to canonical names and manually select subject columns.
+Column names are standardized to lowercase and matched against an alias dictionary. Variations like "Roll No", "Registration Number", and "Roll Number" all map to the canonical `reg_no`. Manual mode allows explicit column mapping for non-standard datasets.
 
 ### Wide to Long Transformation
 
-Once identification and subject columns are finalized, the dataset is reshaped using a melt operation. Subject columns are converted into row-level entries, producing a structured dataset where each row corresponds to a student’s performance in a specific subject.
+Subject columns are melted into a long-format structure where each row represents a single (student, subject) record, enabling consistent grouping, aggregation, and visualization.
 
 ### Marks Cleaning
 
-The marks column undergoes numeric extraction using regular expressions. Any textual noise (e.g., “78 marks”, “90/100”) is cleaned by extracting valid numeric values. Invalid or non-numeric entries are converted to missing values and reported in the cleaning summary.
-
-Marks are assumed to lie within the range 0–100.
+Numeric values are extracted via regex. Entries like "78 marks" or "90/100" are cleaned to plain numbers. Marks outside the configured valid range are set to null and reported. The maximum marks threshold is configurable per session.
 
 ### Attendance Cleaning
 
-Attendance values are standardized to percentage format.
+Attendance is standardized to percentage format. Decimals (0.85 → 85%), percentage symbols (75% → 75), and invalid entries are all handled. Range validation enforces 0–100.
 
-The system intelligently standardizes attendance values:
+### Row Validation & Deduplication
 
-- Converts decimals (0.85 → 85%)
-- Handles percentage symbols (75% → 75)
-- Removes invalid entries
-- Enforces range validation (0–100)
+Rows are dropped if registration number or subject is missing, or if both marks and attendance are null. Duplicate entries for the same (reg_no, subject, term) are detected and the first occurrence is kept.
 
+### Conflict Detection
 
-Invalid or non-numeric attendance values are removed and reported.
+If the same registration number is linked to multiple student names, the pipeline raises a data integrity error before proceeding, prompting the user to fix the source file.
 
-### Row Validation and Deduplication
+---
 
-Rows are removed if:
+## Configurable Parameters
 
-- Registration number or subject is missing  
-- Both marks and attendance are missing  
-- Duplicate records exist for the same (reg_no, subject, term)  
+![Config](assets/configc.png)
 
-Duplicate detection ensures that repeated entries do not distort aggregate calculations. A cleaning report summarizes rows before cleaning, rows after cleaning, invalid entries removed, and duplicates detected.
+LUME supports runtime configuration of the following thresholds in manual mode:
+
+| Parameter | Default | Description |
+|---|---|---|
+| Max Marks | 100 | Upper bound for valid mark entries |
+| Pass Mark | 35 | Threshold below which a student is at-risk |
+| Attendance Threshold | 75% | Minimum attendance to avoid at-risk classification |
+
+These values are stored in session state and propagated across all pages without modifying `schema.py`.
 
 ---
 
 ## Analytical Features
 
-Once cleaned, the dataset becomes available for analytical processing.
-
 ### Subject-Level Summary
-
-For each subject, the system computes:
-
-- Number of unique students  
-- Average marks  
-- Average attendance  
-
-This provides a subject-wise overview of cohort performance.
+Average marks, average attendance, and unique student count per subject.
 
 ### Student-Level Summary
+Average marks, average attendance, and total subjects taken per student.
 
-For each student, the system calculates:
+### Ranking
+Dense ranking based on average marks across all subjects a student has appeared in. Only students with marks in all subjects are ranked to ensure fairness. Multi-term datasets are fully supported.
 
-- Total subjects taken  
-- Average marks across subjects  
-- Average attendance  
+### At-Risk Detection
+A student is flagged as at-risk if their average marks fall below the pass mark threshold OR their average attendance falls below the attendance threshold. Both conditions are evaluated independently.
 
-This supports individual academic evaluation.
+![Risk Scatter](assets/riskscatter.png)
 
-### Ranking Mechanism
-
-Students are ranked using dense ranking based on average marks. If multiple students share identical averages, they receive the same rank, and ranking numbers are assigned consecutively without gaps.
-
-### At-Risk Student Detection
-
-A student is classified as at-risk if:
-
-- Their average marks are below the defined passing mark (default: 35), or  
-- Their average attendance falls below the defined threshold (default: 75%).  
-
-This dual-condition system ensures that both academic performance and participation are considered.
-
-### Strength and Weakness Classification
-
-At the individual level, subject performance is categorized as:
-
-- Strengths: marks ≥ 75  
-- Average: marks between 40 and 74  
-- Weaknesses: marks < 40  
-
-This classification provides intuitive academic profiling.
+### Strength & Weakness Classification
+Per student, subjects are classified as strengths (≥ 75), average (40–74), or weaknesses (< 40).
 
 ---
 
-## Visualization Layer
+## UI Architecture
 
-All visualizations are implemented using Plotly and integrated within Streamlit dashboards.
+LUME uses a reusable component system via `src/ui_components.py`:
 
-The cohort-level dashboard includes:
+- `inject_font()` — Injects the Outfit font globally across all pages
+- `page_header(label, title, subtitle)` — Renders consistent branded page headers
+- `section_header(title)` — Renders uppercase section dividers
+- `render_sidebar()` — Renders the dynamic sidebar with system context and student/cohort stats
 
-- Subject performance heatmap  
-- Top-ranked students bar chart  
-- At-risk scatter plot  
-- Subject summary table  
-
-The student-level dashboard includes:
-
-- Subject-wise marks bar chart  
-- Marks distribution histogram  
-- Performance category donut chart  
-
-These visualizations transform tabular data into interpretable insights.
+The sidebar dynamically shows different context depending on the active page — cohort stats on Total Summary, individual student info on Student Summary.
 
 ---
 
-### Cohort Filtering and Dynamic Segmentation
----
+## Assumptions & Known Limitations
 
-The Total Summary dashboard includes an interactive filtering mechanism that allows users to dynamically refine the dataset before performing analysis. This feature enables selective cohort analysis without modifying the original uploaded file.
-
-Users can filter the dataset based on available attributes such as:
-
-- Class
-- Term
-- Or other categorical identifiers present in the dataset
-
-When a filter is applied, all summary metrics, rankings, visualizations, and at-risk detection logic are recalculated in real time based only on the filtered subset of students.
-
-This ensures that:
-
-- Aggregate statistics reflect only the selected subgroup
-- Rankings are computed within the filtered cohort
-- Heatmaps show subject distribution specific to the filtered data
-- At-risk identification is contextually accurate for that segment
-
-The filtering system operates on the cleaned long-format dataset stored in session state. Since filtering is applied after the preprocessing stage, it does not affect data integrity or cleaning logic. Instead, it acts as a dynamic analytical layer on top of validated data.
-
-This design supports exploratory analysis use cases such as:
-
-- Comparing performance across different classes
-- Analyzing term-wise performance differences
-- Identifying high-risk groups within specific academic segments
-- Evaluating subject difficulty within smaller cohorts
-
-By integrating filtering directly into the dashboard layer, the system enhances interactivity while preserving a reproducible preprocessing pipeline.
-
----
-
-## Ambiguity Resolution Strategy
-
-The system explicitly addresses real-world data ambiguity through:
-
-- Alias-based column normalization  
-- Regex-based numeric extraction  
-- Automatic decimal-to-percentage attendance conversion  
-- Controlled duplicate removal  
-- Manual override mode for non-standard datasets  
-
-By combining automation with optional manual control, the system balances robustness and flexibility.
-
----
-
-## Assumptions and Limitations
-
-The application assumes:
-
-- Marks are out of 100  
-- Attendance is percentage-based  
-- Attendance is uniform per student per term  
-- The dataset represents a single academic term  
-
-Current limitations include:
-
-- No support for grade-based (A/B/C) systems  
-- No multi-term longitudinal comparison  
-- No predictive modeling component  
-- No automated anomaly detection beyond validation rules  
-
-These limitations can be extended in future iterations.
+- Marks are assumed to be numeric and percentage-based (out of a configurable max)
+- Attendance is assumed to be uniform per student per term
+- No support for letter grade systems (A/B/C) — conversion would need to be done before upload
+- No multi-term longitudinal trend comparison across time
+- No predictive modeling component
+- Duplicate reg_no with different names raises a hard error rather than auto-resolving
 
 ---
 
 ## Technologies Used
 
-- Python  
-- Pandas  
-- Streamlit  
-- Plotly  
+- Python 3
+- Pandas
+- Streamlit
+- Plotly
+- OpenPyXL (Excel support)
 
 ---
 
 ## Running the Application
+```bash
+pip install -r requirements.txt
+streamlit run App.py
+```
 
-Install dependencies and launch the application using:
+The application opens in a browser. Upload a CSV or Excel file on the App page to begin.
 
-    pip install -r requirements.txt
-    streamlit run app.py
-
-The application will open in a browser interface where datasets can be uploaded and analyzed interactively.
+A sample dataset is available in `data/raw/dummy_data.csv` and `data/raw/dummy_data.xlsx` for immediate testing.
 
 ---
 
@@ -306,16 +206,15 @@ The application will open in a browser interface where datasets can be uploaded 
 
 This project demonstrates applied knowledge in:
 
-- Data cleaning and preprocessing  
-- Schema normalization  
-- Handling ambiguity in real-world datasets  
-- Data reshaping techniques (wide-to-long transformation)  
-- Exploratory Data Analysis (EDA)  
-- Dashboard-based reporting  
-- Modular software architecture  
-
-It reflects practical implementation of data analytics concepts in an educational domain setting.
+- Data cleaning and preprocessing pipelines
+- Schema normalization and alias resolution
+- Wide-to-long data reshaping (melt operations)
+- Exploratory Data Analysis (EDA)
+- Modular software architecture
+- Session state management in multi-page Streamlit apps
+- Dashboard-based reporting with Plotly
+- Reusable UI component design
 
 ---
 
-End of Documentation
+*LUME — Academic Intelligence Engine — v1.1.0*
