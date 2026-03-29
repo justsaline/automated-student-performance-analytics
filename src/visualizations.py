@@ -1,3 +1,5 @@
+import streamlit as st
+
 import pandas as pd
 import plotly.express as px
 from src.schema import MARKS_MIN, MARKS_MAX,ATTENDANCE_MIN, ATTENDANCE_MAX
@@ -65,12 +67,26 @@ def performance_category_donut(perf_dict):
     return fig
 
 def subject_performance_heatmap(cleaned_df):
+    marks_range = st.session_state.get("max_marks", 100)
     df = cleaned_df.copy()
 
     df = df.dropna(subset=["marks", "subject", "reg_no"])
 
-    bins = [0, 40, 60, 75, 90, 100]
-    labels = ["0–40", "41–60", "61–75", "76–90", "91–100"]
+    bins = [
+        0, 
+        0.40 * marks_range, 
+        0.60 * marks_range, 
+        0.75 * marks_range, 
+        0.90 * marks_range, 
+        marks_range
+    ]
+    labels = [
+        f"0–{int(0.40 * marks_range)}",
+        f"{int(0.40 * marks_range) + 1}–{int(0.60 * marks_range)}",
+        f"{int(0.60 * marks_range) + 1}–{int(0.75 * marks_range)}",
+        f"{int(0.75 * marks_range) + 1}–{int(0.90 * marks_range)}",
+        f"{int(0.90 * marks_range) + 1}–{int(marks_range)}"
+    ]
 
     df["score_band"] = pd.cut(
         df["marks"],
@@ -100,8 +116,10 @@ def subject_performance_heatmap(cleaned_df):
             "color": "Number of Students"
         })
     fig.update_layout(
-        title="Subject-wise Performance Distribution",)
-
+        title=f"Subject-wise Performance Distribution (Max Marks: {marks_range})",
+        xaxis_title="Subject",
+        yaxis_title="Score Range"
+    )
     return fig
 
 def top_students_bar(rank_df, top_n=10):
