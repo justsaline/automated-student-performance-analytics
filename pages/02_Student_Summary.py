@@ -100,7 +100,8 @@ if selected_term == "All Terms":
 else:
     student_perf = student_df[["subject", "marks"]].sort_values("subject")
 
-perf_dict = student_strengths_weaknesses(student_df, selected_reg_no)
+marks_range = st.session_state.get("max_marks", 100)
+perf_dict = student_strengths_weaknesses(student_df, selected_reg_no, marks_range=marks_range)
 
 c1, c2, c3 = st.columns(3)
 
@@ -151,9 +152,13 @@ else:
                 hide_index=True
             )
 st.divider()
-bins = [0, 40, 60, 75, 100]
-labels = ["0–40", "41–60", "61–75", "76–100"]
-
+bins = [0, 0.4 * marks_range, 0.6 * marks_range, 0.75 * marks_range, marks_range]
+labels = [
+    f"0–{int(0.4 * marks_range)}", 
+    f"{int(0.4 * marks_range)+1}–{int(0.6 * marks_range)}", 
+    f"{int(0.6 * marks_range)+1}–{int(0.75 * marks_range)}", 
+    f"{int(0.75 * marks_range)+1}–{int(marks_range)}"
+]
 temp_df = student_perf.copy()
 temp_df["marks_range"] = pd.cut(
     temp_df["marks"],

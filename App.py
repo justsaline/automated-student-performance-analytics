@@ -55,6 +55,8 @@ manual_mapping = None
 subject_columns = None
 pass_mark = PASS_MARK
 attendance_threshold = 75
+marks_range = MARKS_MAX
+st.session_state.max_marks = marks_range
 
 if mode == "manual":
     st.markdown("### 🧩 Manual Column Mapping")
@@ -128,7 +130,7 @@ if run_cleaning:
         if mode == "auto":
             with st.spinner('Scanning data structures...'):
                 time.sleep(2)
-            cleaned_df, report = clean_data(raw_df, mode = "auto", marks_range = MARKS_MAX)
+            cleaned_df, report = clean_data(raw_df, mode = "auto", marks_range = marks_range)
         else:
             with st.spinner('Scanning data structures...'):
                 time.sleep(2)
@@ -145,6 +147,7 @@ if run_cleaning:
     st.session_state.data_ready = True
     st.session_state.pass_mark = pass_mark
     st.session_state.attendance_threshold = attendance_threshold
+    st.session_state.max_marks = marks_range
     st.success("Data Cleaned Successfully")
 
 from src.ui_components import inject_font, page_header, section_header, render_cleaning_report

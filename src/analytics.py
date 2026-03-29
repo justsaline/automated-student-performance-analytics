@@ -62,13 +62,12 @@ def student_subject_analysis(df, reg_no):
     
     return student_perf
 
-def student_strengths_weaknesses(df, reg_no):
+def student_strengths_weaknesses(df, reg_no, marks_range=100):
     
     perf = student_subject_analysis(df, reg_no)
-    
-    strengths = perf[perf['marks']>=75]['subject'].tolist()
-    weaknesses = perf[perf['marks']<40]['subject'].tolist()
-    average = perf[(perf['marks'] >= 40) & (perf['marks'] < 75)]['subject'].tolist()
+    strengths = perf[perf['marks']>=((0.75*marks_range))]['subject'].tolist()
+    weaknesses = perf[perf['marks']<(0.40*marks_range)]['subject'].tolist()
+    average = perf[(perf['marks'] >= 0.40*marks_range) & (perf['marks'] < 0.75*marks_range)]['subject'].tolist()
     
     return {'strengths': strengths,'average': average,'weaknesses': weaknesses}
 
