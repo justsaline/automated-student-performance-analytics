@@ -173,9 +173,11 @@ range_summary = (
         Subjects=lambda x: ", ".join(x),
         Count="count"
     )
-    .reindex(labels, fill_value=0)
+    .reindex(labels)
     .reset_index()
 )
+range_summary["Subjects"] = range_summary["Subjects"].fillna("")
+range_summary["Count"] = range_summary["Count"].fillna(0).astype(int)
 
 range_summary.columns = ["Marks Range", "Subjects", "Count"]
 col1, col2 = st.columns([2, 1])
