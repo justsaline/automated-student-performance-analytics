@@ -23,6 +23,38 @@ def load_data(uploaded_file):
     
     return df
 
+def load_excel_sheets(uploaded_file, sheet_names):
+    """
+    Reads multiple sheets from an Excel file.
+    Returns a list of (sheet_name, DataFrame) tuples.
+    If a sheet has no term column (checked after lowercasing headers),
+    injects the sheet name as the term value for all rows in that sheet.
+    """
+    result = []
+    for sheet in sheet_names:
+        try:
+            df = pd.read_excel(uploaded_file, sheet_name=sheet)
+        except Exception as e:
+            raise ValueError(f"Failed to read sheet '{sheet}': {e}")
+        
+        if df.empty:
+            continue
+        
+        # check for term column using known aliases
+        normalized_cols = [c.lower().strip() for c in df.columns]
+        term_aliases = ["term", "exam", "semester", "assessment"]
+        has_term = any(col in term_aliases for col in normalized_cols)
+        
+        if not has_term:
+            df['term'] = sheet
+        
+        result.append((sheet, df))
+    
+    if not result:
+        raise ValueError("No valid data found in the selected sheets.")
+    
+    return result
+
 # Normalize column names and rename to canonical names when mode is auto
 def normalize_columns(df):
     df = df.copy()
@@ -58,7 +90,7 @@ def apply_manual_column_mapping(df, manual_mapping):
 def reshape_wide_to_long(df, subject_columns):
     
     df = df.copy()
-    id_columns = ID_COLUMNS.copy()
+    id_columns = [col for col in ID_COLUMNS if col in df.columns]
     
     long_df = df.melt(id_vars = id_columns, value_vars = subject_columns, var_name = "subject", value_name = "marks")
     
@@ -132,7 +164,7 @@ def drop_invalid_rows(df):
     return df, result
 
 # Main function deciding mode and applying data cleaning steps in order
-def clean_data(df, mode = "auto", manual_mapping = None, subject_columns = None, marks_range=None):
+def clean_data(df, mode = "auto", manual_mapping = None, subject_columns = None, marks_range=None, extra_dfs=None, source_name="Unknown"):
     
     df = df.copy()
     
@@ -151,7 +183,28 @@ def clean_data(df, mode = "auto", manual_mapping = None, subject_columns = None,
     else:
         raise ValueError("Mode must be either 'auto' or 'manual'.")
     
+    if 'term' not in df.columns:
+        df['term'] = source_name
+    
     df = reshape_wide_to_long(df, subject_columns)
+
+    if extra_dfs:
+        extra_long_dfs = []
+        for extra_df in extra_dfs:
+            extra = extra_df.copy()
+            if mode == "auto":
+                extra = normalize_columns(extra)
+                extra_subjects = detect_subject_columns(extra)
+            elif mode == "manual":
+                extra = apply_manual_column_mapping(extra, manual_mapping)
+                extra_subjects = subject_columns
+            if 'term' not in extra.columns:
+                extra['term'] = source_name
+            extra_long = reshape_wide_to_long(extra, extra_subjects)
+            extra_long_dfs.append(extra_long)
+        
+        df = pd.concat([df] + extra_long_dfs, ignore_index=True)
+
     df, marks_report = clean_marks(df, marks_range)
     report.update(marks_report)
     df, attendance_report = clean_attendance(df)

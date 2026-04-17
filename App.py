@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-from src.data_cleaning import load_data, clean_data, normalize_columns, detect_subject_columns, compute_percentage_column
+import os
+from src.data_cleaning import load_data, load_excel_sheets, clean_data, normalize_columns, detect_subject_columns, compute_percentage_column
 from src.schema import ID_COLUMNS, MARKS_MAX, PASS_MARK
 from src.ui_components import inject_font, page_header, section_header
 import time
@@ -21,17 +22,24 @@ page_header(
 if "data_ready" not in st.session_state:
     st.session_state.data_ready = False
 
-# ── Data-already-loaded indicator ────────────────────────────────────────────
+# show a notice if data is already loaded
 if st.session_state.get("data_ready", False):
     st.success("✅ Data already loaded — navigate to the summary pages or re-upload below to reset.")
 
 uploaded_file = st.file_uploader("Upload student data (CSV or Excel)", type = ['csv', 'xlsx'])
 
 if uploaded_file is not None:
-    try: 
+    try:
         st.session_state.raw_df = load_data(uploaded_file)
-        # Reset ready flag when a new file is uploaded
         st.session_state.data_ready = False
+        
+        if uploaded_file.name.lower().endswith(".xlsx"):
+            uploaded_file.seek(0)
+            xl = pd.ExcelFile(uploaded_file)
+            st.session_state.excel_sheet_names = xl.sheet_names
+        else:
+            st.session_state.excel_sheet_names = []
+            
     except ValueError as e:
         st.error(str(e))
         st.stop()
@@ -42,8 +50,37 @@ if "raw_df" not in st.session_state:
     
 raw_df = st.session_state.raw_df
 
+source_name = os.path.splitext(uploaded_file.name)[0] if uploaded_file is not None else "Unknown"
+
 section_header("Your Data")
 st.dataframe(raw_df.head(5), use_container_width=True, hide_index=True)
+
+# multi-sheet selection for excel files
+if st.session_state.get("excel_sheet_names"):
+    all_sheets = st.session_state.excel_sheet_names
+    
+    if len(all_sheets) > 1:
+        with st.container(border=True):
+            st.subheader("📄 Sheet Selection")
+            st.caption(
+                "Multiple sheets detected. By default only the first sheet is loaded. "
+                "Select additional sheets to merge them — useful when each sheet represents a different term or semester. "
+                "If a sheet has no term column, the sheet name will be used as the term automatically."
+            )
+            selected_sheets = st.multiselect(
+                "Select sheets to include",
+                options=all_sheets,
+                default=[all_sheets[0]],
+                key="selected_sheets"
+            )
+            if not selected_sheets:
+                st.warning("⚠️ Please select at least one sheet.")
+    else:
+        selected_sheets = all_sheets
+        st.session_state.selected_sheets = selected_sheets
+else:
+    selected_sheets = []
+    st.session_state.selected_sheets = selected_sheets
 
 with st.container(border=True):
     st.subheader("⚙️ Cleaning Mode")
@@ -64,7 +101,7 @@ attendance_threshold = 75
 marks_range = MARKS_MAX
 st.session_state.max_marks = marks_range
 
-# ── Detect subject columns for auto mode (for UI purposes only) ───────────────
+# detect subjects early for the auto-mode info banner
 auto_detected_subjects = []
 if mode == "auto":
     try:
@@ -142,7 +179,7 @@ if mode == "manual":
     if not manual_mapping or not subject_columns:
         st.warning("⚠️ Manual mode requires column mapping and subject selection.")
 
-# ── Per-subject max marks configuration ──────────────────────────────────────
+
 # Determine which subjects are known at this point for the UI
 ui_subjects = subject_columns if mode == "manual" else auto_detected_subjects
 
@@ -201,29 +238,54 @@ with st.container(border=True):
             # Store a representative global max for legacy uses
             st.session_state.max_marks = 100
 
-# ── Run button ────────────────────────────────────────────────────────────────
+
 run_cleaning = st.button("🚀 Run Data Cleaning", disabled=not max_marks_config_valid)
 st.markdown("<br>", unsafe_allow_html=True) 
 
 if run_cleaning:
     try:
+        extra_dfs = []
+        selected_sheets = st.session_state.get("selected_sheets", [])
+        excel_sheet_names = st.session_state.get("excel_sheet_names", [])
+        
+        if excel_sheet_names and len(selected_sheets) > 1 and uploaded_file is not None:
+            uploaded_file.seek(0)
+            sheet_data = load_excel_sheets(uploaded_file, selected_sheets)
+            first_sheet_name = selected_sheets[0]
+            extra_sheet_data = [(name, df) for name, df in sheet_data if name != first_sheet_name]
+            extra_dfs = [df for _, df in extra_sheet_data]
+        
+        if excel_sheet_names and selected_sheets:
+            source_name = selected_sheets[0]
+
         if mode == "auto":
             with st.spinner('Scanning data structures...'):
                 time.sleep(2)
-            cleaned_df, report = clean_data(raw_df, mode="auto", marks_range=st.session_state.max_marks)
+            cleaned_df, report = clean_data(
+                raw_df,
+                mode="auto",
+                marks_range=st.session_state.max_marks,
+                extra_dfs=extra_dfs if extra_dfs else None,
+                source_name=source_name
+            )
         else:
             with st.spinner('Scanning data structures...'):
                 time.sleep(2)
-            cleaned_df, report = clean_data(raw_df, mode="manual",
-                                            manual_mapping=manual_mapping,
-                                            subject_columns=subject_columns,
-                                            marks_range=marks_range)
+            cleaned_df, report = clean_data(
+                raw_df,
+                mode="manual",
+                manual_mapping=manual_mapping,
+                subject_columns=subject_columns,
+                marks_range=marks_range,
+                extra_dfs=extra_dfs if extra_dfs else None,
+                source_name=source_name
+            )
             
     except Exception as e:
         st.error(str(e))
         st.stop()
 
-    # Compute marks_pct column using per-subject or global config
+
     max_marks_config = st.session_state.get("max_marks_config", st.session_state.get("max_marks", 100))
     cleaned_df = compute_percentage_column(cleaned_df, max_marks_config)
 

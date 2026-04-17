@@ -129,7 +129,6 @@ else:
     col_chart, col_table = st.columns([6, 4], gap="large")
     
     with col_chart:
-        # Bar chart shows raw marks so "43/50" is visible, not "86%"
         bar_chart = student_subject_marks_bar(student_perf)
         bar_chart.update_layout(title_text="")
         st.plotly_chart(bar_chart, use_container_width=True)
@@ -159,7 +158,7 @@ else:
             )
 st.divider()
 
-# ── Marks range summary — fixed pct bins ─────────────────────────────────────
+# bucket subjects into pct ranges
 bins = [0, 40, 60, 75, 100]
 labels = ["0–40", "41–60", "61–75", "76–100"]
 
@@ -191,7 +190,6 @@ with col_chart:
         st.info("No mark data available for this student.")
     else:
         pass_mark = st.session_state.get("pass_mark", PASS_MARK)
-        # Distribution chart uses marks_pct so x-axis is always 0–100
         dist_fig = student_marks_distribution(student_perf, pass_mark=pass_mark)
         dist_fig.update_layout(title_text="")
         st.plotly_chart(dist_fig, use_container_width=True)
@@ -244,15 +242,12 @@ else:
         col_donut, col_details = st.columns([4, 6], gap="large")
 
         with col_donut:
-            # Adds vertical space to push the chart down to match the right-side container
             st.markdown("<br><br>", unsafe_allow_html=True)
             
             perf_fig = performance_category_donut(perf_dict)
             perf_fig.update_layout(
                 showlegend=True,
-                # Adjusted y to pull the legend slightly closer to the donut
                 legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
-                # Added top margin (t=50) to bring the chart down and center it vertically
                 margin=dict(t=50, b=0, l=0, r=0),
                 height=300 
             )
