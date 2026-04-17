@@ -2,7 +2,7 @@ import pandas as pd
 from src.schema import PASS_MARK
 
 def subject_summary(df):
-    summary = df.groupby('subject').agg(students = ('reg_no', 'nunique'), avg_marks = ('marks', 'mean'), avg_attendance = ('attendance', 'mean')).reset_index()
+    summary = df.groupby('subject').agg(students = ('reg_no', 'nunique'), avg_marks = ('marks_pct', 'mean'), avg_attendance = ('attendance', 'mean')).reset_index()
     return summary
 
 def attendance_summary(df):
@@ -17,7 +17,7 @@ def student_summary(df):
             class_=('class', 'first'),
             term=('term', 'first'),
             subjects_taken=('subject', 'nunique'),
-            avg_marks=('marks', 'mean'),
+            avg_marks=('marks_pct', 'mean'),
             avg_attendance=('attendance', lambda x: x.mean(skipna=True))
         ).reset_index()
     )
@@ -58,16 +58,16 @@ def student_subject_analysis(df, reg_no):
     if student_df.empty:
         raise ValueError(f"No data found for reg_no: {reg_no}")
     
-    student_perf = student_df[['subject', 'marks']].sort_values('subject').reset_index(drop=True)
+    student_perf = student_df[['subject', 'marks', 'marks_pct']].sort_values('subject').reset_index(drop=True)
     
     return student_perf
 
 def student_strengths_weaknesses(df, reg_no, marks_range=100):
-    
+    # marks_range kept for backwards compatibility but ignored — thresholds are pct-based
     perf = student_subject_analysis(df, reg_no)
-    strengths = perf[perf['marks']>=((0.75*marks_range))]['subject'].tolist()
-    weaknesses = perf[perf['marks']<(0.40*marks_range)]['subject'].tolist()
-    average = perf[(perf['marks'] >= 0.40*marks_range) & (perf['marks'] < 0.75*marks_range)]['subject'].tolist()
+    strengths = perf[perf['marks_pct'] >= 75]['subject'].tolist()
+    weaknesses = perf[perf['marks_pct'] < 40]['subject'].tolist()
+    average = perf[(perf['marks_pct'] >= 40) & (perf['marks_pct'] < 75)]['subject'].tolist()
     
     return {'strengths': strengths,'average': average,'weaknesses': weaknesses}
 

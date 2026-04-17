@@ -31,7 +31,7 @@ COLUMN_ALIASES = {
 }
 
 MARKS_MIN = 0
-MARKS_MAX = 100
+MARKS_MAX = 100  # Percentage ceiling — all analytics operate on the marks_pct (0–100) scale
 PASS_MARK = 35
 
 ATTENDANCE_MIN = 0

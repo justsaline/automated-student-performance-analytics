@@ -108,8 +108,9 @@ def drop_invalid_rows(df):
     conflicts = conflict_check[conflict_check > 1].index.tolist()
     if conflicts:
         raise ValueError(
-            f"Data error: Registration number(s) {', '.join(str(c) for c in conflicts)} "
-            f"are linked to multiple student names. Please fix your data before uploading."
+            f"Conflict detected: Registration number(s) {', '.join(str(c) for c in conflicts)} are linked to "
+            f"more than one student name. "
+            f"Please check your data for duplicate or mismatched entries and re-upload."
         )
     before_rows = len(df)
     df = df.dropna(subset = ['reg_no', 'subject'])
@@ -159,3 +160,27 @@ def clean_data(df, mode = "auto", manual_mapping = None, subject_columns = None,
     report.update(drop_report)
     
     return  df, report
+
+
+def compute_percentage_column(df, max_marks_config):
+    """
+    Adds a marks_pct column to the long-format df.
+
+    If max_marks_config is a dict (per-subject), maps each subject to its max.
+    If max_marks_config is an int/float (global), uses it for all subjects.
+
+    marks_pct = (marks / subject_max_marks) * 100, clipped to 0-100.
+    Rows where subject is not in config default to 100 as max marks.
+    """
+    df = df.copy()
+    if isinstance(max_marks_config, dict):
+        df['marks_pct'] = df.apply(
+            lambda row: (row['marks'] / max_marks_config.get(row['subject'], 100)) * 100
+            if pd.notna(row['marks']) else pd.NA,
+            axis=1
+        )
+    else:
+        df['marks_pct'] = (df['marks'] / max_marks_config) * 100
+
+    df['marks_pct'] = df['marks_pct'].clip(0, 100)
+    return df

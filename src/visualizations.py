@@ -5,30 +5,30 @@ import plotly.express as px
 from src.schema import MARKS_MIN, MARKS_MAX,ATTENDANCE_MIN, ATTENDANCE_MAX
 
 def student_subject_marks_bar(student_subject_df):
-    fig = px.bar(student_subject_df, x='subject', y='marks',
-                 text='marks', title = 'Student Subject Marks',
-                 labels = {'marks': 'Marks', 'subject': 'Subject'},
+    fig = px.bar(student_subject_df, x='subject', y='marks_pct',
+                 text='marks_pct', title='Student Subject Marks',
+                 labels={'marks_pct': 'Marks (%)', 'subject': 'Subject'},
                  color='subject')
     
-    fig.update_traces(texttemplate="%{text:.2f}")
+    fig.update_traces(texttemplate="%{text:.1f}%")
     fig.update_traces(textposition='outside')
-    fig.update_layout(yaxis_range = [0,100], showlegend = False)
+    fig.update_layout(yaxis_range=[0, 110], showlegend=False)  # 110 gives headroom for outside labels
     return fig
 
-def student_marks_distribution(student_subject_df,pass_mark=35):
+def student_marks_distribution(student_subject_df, pass_mark=35):
     fig = px.histogram(
         student_subject_df,
-        x="marks",
+        x="marks_pct",
         nbins=5,
         title="Marks Distribution",
-        labels={"marks": "Marks"},
+        labels={"marks_pct": "Marks (%)"},
     )
 
     fig.add_vline(
         x=pass_mark,
         line_dash="dash",
         line_color="red",
-        annotation_text=f"Pass Mark ({pass_mark})",
+        annotation_text=f"Pass Mark ({pass_mark}%)",
         annotation_position="top"
     )
 
@@ -36,7 +36,7 @@ def student_marks_distribution(student_subject_df,pass_mark=35):
         xaxis_range=[0, 100],
         yaxis_title="Number of Subjects",
         bargap=0.25,
-        height=350
+        height=380
     )
     return fig
 
@@ -63,47 +63,37 @@ def performance_category_donut(perf_dict):
         color='category',
         color_discrete_map=color_map
     )
-    fig.update_layout(height=350)
+    fig.update_layout(height=380)
     return fig
 
 def subject_performance_heatmap(cleaned_df):
-    marks_range = st.session_state.get("max_marks", 100)
     df = cleaned_df.copy()
 
-    df = df.dropna(subset=["marks", "subject", "reg_no"])
+    df = df.dropna(subset=["marks_pct", "subject", "reg_no"])
 
-    bins = [
-        0, 
-        0.40 * marks_range, 
-        0.60 * marks_range, 
-        0.75 * marks_range, 
-        0.90 * marks_range, 
-        marks_range
-    ]
-    labels = [
-        f"0–{int(0.40 * marks_range)}",
-        f"{int(0.40 * marks_range) + 1}–{int(0.60 * marks_range)}",
-        f"{int(0.60 * marks_range) + 1}–{int(0.75 * marks_range)}",
-        f"{int(0.75 * marks_range) + 1}–{int(0.90 * marks_range)}",
-        f"{int(0.90 * marks_range) + 1}–{int(marks_range)}"
-    ]
+    # Fixed percentage-based bins — works regardless of per-subject max marks
+    bins = [0, 40, 60, 75, 90, 100]
+    labels = ["0–40", "41–60", "61–75", "76–90", "91–100"]
 
-    df["score_band"] = pd.cut(
-        df["marks"],
-        bins=bins,
-        labels=labels,
-        include_lowest=True)
+    df["score_band"] = pd.Categorical(
+        pd.cut(df["marks_pct"], bins=bins, labels=labels, include_lowest=True),
+        categories=labels,
+        ordered=True
+    )
 
     heatmap_df = (
-        df.groupby(["score_band", "subject"])["reg_no"]
+        df.groupby(["score_band", "subject"], observed=False)["reg_no"]
         .nunique()
-        .reset_index(name="student_count"))
+        .reset_index(name="student_count")
+    )
 
-    pivot_df = heatmap_df.pivot(
-        index="score_band",
-        columns="subject",
-        values="student_count"
-    ).fillna(0)
+    pivot_df = (
+        heatmap_df
+        .pivot(index="score_band", columns="subject", values="student_count")
+        .reindex(labels)          # enforce correct row order
+        .fillna(0)
+        .astype(int)
+    )
 
     fig = px.imshow(
         pivot_df,
@@ -112,13 +102,15 @@ def subject_performance_heatmap(cleaned_df):
         color_continuous_scale="matter",
         labels={
             "x": "Subject",
-            "y": "Score Range",
+            "y": "Score Range (%)",
             "color": "Number of Students"
-        })
+        }
+    )
     fig.update_layout(
-        title=f"Subject-wise Performance Distribution (Max Marks: {marks_range})",
+        title="Subject-wise Performance Distribution (%)",
         xaxis_title="Subject",
-        yaxis_title="Score Range"
+        yaxis_title="Score Range (%)",
+        yaxis={"autorange": "reversed"}  # highest band at top
     )
     return fig
 
@@ -129,7 +121,7 @@ def top_students_bar(rank_df, top_n=10):
     fig = px.bar(df, x='avg_marks', y = 'student_name',
                  orientation = 'h', text = "avg_marks", 
                 title = f'Top {top_n} Students by Average Marks',
-                labels = {'avg_marks': 'Average Marks', 'student_name': 'Student'},
+                labels = {'avg_marks': 'Average Marks (%)', 'student_name': 'Student'},
                 color="avg_marks",color_continuous_scale="Tealgrn")
 
     fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
@@ -142,12 +134,12 @@ def top_students_bar(rank_df, top_n=10):
 
     return fig
     
-def at_risk_scatter(at_risk_df,pass_mark=35, attendance_threshold = 75):
+def at_risk_scatter(at_risk_df, pass_mark=35, attendance_threshold=75):
     fig = px.scatter(at_risk_df, x='avg_attendance', y='avg_marks',
                     hover_data=['student_name', 'reg_no'],
                     labels={
                     "avg_attendance": "Average Attendance (%)",
-                    "avg_marks": "Average Marks"
+                    "avg_marks": "Average Marks (%)"
                     },
                     title="At-Risk Students: Marks vs Attendance",
                     color_discrete_sequence=["#E05C5C"])
@@ -162,7 +154,7 @@ def at_risk_scatter(at_risk_df,pass_mark=35, attendance_threshold = 75):
     y=pass_mark,
     line_dash="dash",
     line_color="red",
-    annotation_text=f"Passing Mark ({pass_mark})",
+    annotation_text=f"Passing Mark ({pass_mark}%)",
     annotation_position="top right"
     )
 

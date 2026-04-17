@@ -63,7 +63,7 @@ def render_sidebar():
 
         st.markdown(
             "<div style='margin-top: 50%; font-size: 0.8rem; color: gray; opacity: 0.6;'>"
-            "SYSTEM v1.0.4<br>"
+            "SYSTEM v1.2.0<br>"
             "BUILT FOR ACADEMIC CLARITY"
             "</div>",
             unsafe_allow_html=True

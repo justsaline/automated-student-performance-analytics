@@ -28,7 +28,7 @@ if filtered_df.empty:
 
 groupable_columns = [
     col for col in filtered_df.columns
-    if col not in ["marks", "reg_no", "student_name", "subject", "attendance"]
+    if col not in ["marks", "marks_pct", "reg_no", "student_name", "subject", "attendance"]
 ]
 
 st.divider()
@@ -79,7 +79,7 @@ with st.container(border=True):
                 st.markdown(f"**Active Group:** `{group_by}`")
                 st.markdown(f"**Active Term:** `{selected_value}`")
     total_students = filtered_df['reg_no'].nunique()
-    avg_marks = filtered_df['marks'].mean()
+    avg_marks = filtered_df['marks_pct'].mean()
     avg_attendance = filtered_df['attendance'].mean()
 
 st.markdown("### 📌 Cohort Overview")
@@ -93,7 +93,7 @@ with c1:
 
 with c2:
     with st.container(border=True):
-        st.metric("Average Marks", f"{avg_marks:.2f}")
+        st.metric("Average Marks (%)", f"{avg_marks:.1f}%")
 
 with c3:
     with st.container(border=True):
@@ -126,7 +126,8 @@ with col_table:
         
         sub_df = subject_summary(filtered_df)
         display_sub_df = sub_df[["subject", "students", "avg_marks"]].copy()
-        display_sub_df["avg_marks"] = display_sub_df["avg_marks"].round(2)
+        display_sub_df["avg_marks"] = display_sub_df["avg_marks"].round(1).astype(str) + "%"
+        display_sub_df = display_sub_df.rename(columns={"subject": "Subject", "students": "Students", "avg_marks": "Avg Marks (%)"})
         
         st.markdown("<br>", unsafe_allow_html=True)
         st.dataframe(
@@ -158,7 +159,8 @@ with tab_top10:
             st.markdown("**ℹ️ Top 10 List**")
             
             display_df = top_df[["rank", "reg_no", "student_name", "avg_marks"]].copy()
-            display_df["avg_marks"] = display_df["avg_marks"].round(2)
+            display_df["avg_marks"] = display_df["avg_marks"].round(1).astype(str) + "%"
+            display_df = display_df.rename(columns={"rank": "Rank", "reg_no": "Reg No", "student_name": "Student", "avg_marks": "Avg Marks (%)"})
             
             st.dataframe(
                 display_df,
@@ -169,7 +171,10 @@ with tab_top10:
 
 with tab_full:
     st.dataframe(
-        rank_df[["rank", "reg_no", "student_name", "avg_marks", "avg_attendance"]],
+        rank_df[["rank", "reg_no", "student_name", "avg_marks", "avg_attendance"]]
+        .rename(columns={"rank": "Rank", "reg_no": "Reg No", "student_name": "Student", "avg_marks": "Avg Marks (%)", "avg_attendance": "Avg Attendance (%)"})
+        .assign(**{"Avg Marks (%)": lambda d: d["Avg Marks (%)"].round(1).astype(str) + "%",
+                   "Avg Attendance (%)": lambda d: d["Avg Attendance (%)"].round(1).astype(str) + "%"}),
         use_container_width=True,
         height=500,
         hide_index=True
@@ -196,8 +201,9 @@ if not at_risk_df.empty:
         st.caption("Students listed below have been identified as at-risk based on low average marks or attendance.")
         
         display_risk_df = at_risk_df[["reg_no", "student_name", "avg_marks", "avg_attendance"]].copy()
-        display_risk_df["avg_marks"] = display_risk_df["avg_marks"].round(2)
-        display_risk_df["avg_attendance"] = display_risk_df["avg_attendance"].round(2)
+        display_risk_df["avg_marks"] = display_risk_df["avg_marks"].round(1).astype(str) + "%"
+        display_risk_df["avg_attendance"] = display_risk_df["avg_attendance"].round(1).astype(str) + "%"
+        display_risk_df = display_risk_df.rename(columns={"reg_no": "Reg No", "student_name": "Student", "avg_marks": "Avg Marks (%)", "avg_attendance": "Avg Attendance (%)"})
         
         st.dataframe(
             display_risk_df,

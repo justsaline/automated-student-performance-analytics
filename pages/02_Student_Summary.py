@@ -6,7 +6,6 @@ from src.analytics import (
     student_strengths_weaknesses,
 )
 from src.schema import PASS_MARK
-from src.schema import PASS_MARK
 from src.visualizations import (
     student_subject_marks_bar,
     student_marks_distribution,
@@ -77,6 +76,7 @@ with side_context:
             st.markdown(f"**ID:** `{selected_reg_no}`")
             st.markdown(f"**Viewing:** `{selected_term}`")
         st.divider()
+
 student_df = long_df[long_df["reg_no"] == selected_reg_no]
 
 if selected_term != "All Terms":
@@ -90,26 +90,26 @@ if pd.isna(attendance):
 else:
     attendance_display = f"{attendance:.2f}%"
 
+# Build student_perf with both marks (raw) and marks_pct for different chart uses
 if selected_term == "All Terms":
     student_perf = (
         student_df
         .groupby("subject", as_index=False)
-        .agg(marks=("marks", "mean"))
+        .agg(marks=("marks", "mean"), marks_pct=("marks_pct", "mean"))
         .sort_values("subject")
     )
 else:
-    student_perf = student_df[["subject", "marks"]].sort_values("subject")
+    student_perf = student_df[["subject", "marks", "marks_pct"]].sort_values("subject")
 
-marks_range = st.session_state.get("max_marks", 100)
-perf_dict = student_strengths_weaknesses(student_df, selected_reg_no, marks_range=marks_range)
+perf_dict = student_strengths_weaknesses(student_df, selected_reg_no)
 
 c1, c2, c3 = st.columns(3)
 
-avg_marks = overview['avg_marks']
+avg_marks = overview['avg_marks']  # now pct-based from analytics
 
 with c1:
     with st.container(border=True):
-        st.metric("Average Marks", f"{avg_marks:.2f}" if avg_marks is not None and not pd.isna(avg_marks) else "N/A") 
+        st.metric("Average Marks (%)", f"{avg_marks:.1f}%" if avg_marks is not None and not pd.isna(avg_marks) else "N/A") 
         
 with c2:
     with st.container(border=True):
@@ -129,6 +129,7 @@ else:
     col_chart, col_table = st.columns([6, 4], gap="large")
     
     with col_chart:
+        # Bar chart shows raw marks so "43/50" is visible, not "86%"
         bar_chart = student_subject_marks_bar(student_perf)
         bar_chart.update_layout(title_text="")
         st.plotly_chart(bar_chart, use_container_width=True)
@@ -137,13 +138,18 @@ else:
         with st.container(border=True):
             st.markdown("**ℹ️ About Subject Marks**")
             st.caption(
-                "This bar chart displays the marks obtained by the selected student in each subject. "
-                "It provides a clear visual representation of their performance across different subjects."
+                "Raw score alongside percentage (normalised to 0–100 across all subjects). "
+                "The bar chart and analytics use the percentage scale."
             )
             
-            display_perf_df = student_perf.copy()
-            if "marks" in display_perf_df.columns:
-                display_perf_df["marks"] = display_perf_df["marks"].round(2)
+            display_perf_df = student_perf[["subject", "marks", "marks_pct"]].copy()
+            display_perf_df["marks"] = display_perf_df["marks"].round(1)
+            display_perf_df["marks_pct"] = display_perf_df["marks_pct"].round(1).astype(str) + "%"
+            display_perf_df = display_perf_df.rename(columns={
+                "subject": "Subject",
+                "marks": "Raw Score",
+                "marks_pct": "Score (%)"
+            })
             
             st.markdown("<br>", unsafe_allow_html=True)
             st.dataframe(
@@ -152,23 +158,21 @@ else:
                 hide_index=True
             )
 st.divider()
-bins = [0, 0.4 * marks_range, 0.6 * marks_range, 0.75 * marks_range, marks_range]
-labels = [
-    f"0–{int(0.4 * marks_range)}", 
-    f"{int(0.4 * marks_range)+1}–{int(0.6 * marks_range)}", 
-    f"{int(0.6 * marks_range)+1}–{int(0.75 * marks_range)}", 
-    f"{int(0.75 * marks_range)+1}–{int(marks_range)}"
-]
+
+# ── Marks range summary — fixed pct bins ─────────────────────────────────────
+bins = [0, 40, 60, 75, 100]
+labels = ["0–40", "41–60", "61–75", "76–100"]
+
 temp_df = student_perf.copy()
 temp_df["marks_range"] = pd.cut(
-    temp_df["marks"],
+    temp_df["marks_pct"],
     bins=bins,
     labels=labels,
     include_lowest=True
 )
 
 range_summary = (
-    temp_df.groupby("marks_range")["subject"]
+    temp_df.groupby("marks_range", observed=False)["subject"]
     .agg(
         Subjects=lambda x: ", ".join(x),
         Count="count"
@@ -178,17 +182,16 @@ range_summary = (
 )
 range_summary["Subjects"] = range_summary["Subjects"].fillna("")
 range_summary["Count"] = range_summary["Count"].fillna(0).astype(int)
-
-range_summary.columns = ["Marks Range", "Subjects", "Count"]
-col1, col2 = st.columns([2, 1])
+range_summary.columns = ["Marks Range (%)", "Subjects", "Count"]
 
 col_chart, col_table = st.columns([6, 4], gap="large")
 
 with col_chart:
-    if student_perf.empty or student_perf['marks'].isna().all():
+    if student_perf.empty or student_perf['marks_pct'].isna().all():
         st.info("No mark data available for this student.")
     else:
         pass_mark = st.session_state.get("pass_mark", PASS_MARK)
+        # Distribution chart uses marks_pct so x-axis is always 0–100
         dist_fig = student_marks_distribution(student_perf, pass_mark=pass_mark)
         dist_fig.update_layout(title_text="")
         st.plotly_chart(dist_fig, use_container_width=True)
@@ -306,6 +309,14 @@ else:
         for col in ["marks", "attendance"]:
             if col in display_full_df.columns:
                 display_full_df[col] = display_full_df[col].round(2)
+        if "marks_pct" in display_full_df.columns:
+            display_full_df["marks_pct"] = display_full_df["marks_pct"].round(1).astype(str) + "%"
+        display_full_df = display_full_df.rename(columns={
+            "reg_no": "Reg No", "student_name": "Student",
+            "class": "Class", "term": "Term",
+            "attendance": "Attendance (%)", "subject": "Subject",
+            "marks": "Raw Score", "marks_pct": "Score (%)"
+        })
 
         st.dataframe(
             display_full_df,
