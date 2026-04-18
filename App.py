@@ -67,10 +67,11 @@ if st.session_state.get("excel_sheet_names"):
                 "Select additional sheets to merge them — useful when each sheet represents a different term or semester. "
                 "If a sheet has no term column, the sheet name will be used as the term automatically."
             )
+            _sheet_default = st.session_state.get("selected_sheets") or [all_sheets[0]]
             selected_sheets = st.multiselect(
                 "Select sheets to include",
                 options=all_sheets,
-                default=[all_sheets[0]],
+                default=_sheet_default,
                 key="selected_sheets"
             )
             if not selected_sheets:
@@ -105,13 +106,35 @@ st.session_state.max_marks = marks_range
 auto_detected_subjects = []
 if mode == "auto":
     try:
-        auto_detected_subjects = detect_subject_columns(normalize_columns(raw_df))
+        all_auto_subjects = list(detect_subject_columns(normalize_columns(raw_df)))
+        
+        current_selected = st.session_state.get("selected_sheets", [])
+        excel_sheet_names = st.session_state.get("excel_sheet_names", [])
+        
+        if excel_sheet_names and len(current_selected) > 1 and uploaded_file is not None:
+            try:
+                uploaded_file.seek(0)
+                for sheet in current_selected[1:]:
+                    try:
+                        extra_df = pd.read_excel(uploaded_file, sheet_name=sheet)
+                        uploaded_file.seek(0)
+                        extra_subjects = detect_subject_columns(normalize_columns(extra_df))
+                        for s in extra_subjects:
+                            if s not in all_auto_subjects:
+                                all_auto_subjects.append(s)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        
+        auto_detected_subjects = all_auto_subjects
+        
     except Exception:
         auto_detected_subjects = []
 
     if auto_detected_subjects:
         st.info(
-            f"**Auto mode** — {len(auto_detected_subjects)} subject column(s) detected: "
+            f"**Auto mode** — {len(auto_detected_subjects)} subject column(s) detected across all selected sheets: "
             + ", ".join(f"`{s}`" for s in auto_detected_subjects)
         )
 
@@ -185,57 +208,81 @@ ui_subjects = subject_columns if mode == "manual" else auto_detected_subjects
 
 with st.container(border=True):
     st.subheader("📐 Max Marks Configuration")
-    st.caption("If some subjects have different maximum marks (e.g. lab subjects out of 50), configure them here. All analytics will use percentage scores internally.")
+    st.caption(
+        "If some subjects have different maximum marks (e.g. lab subjects out of 50), configure them here. "
+        "All analytics will use percentage scores internally."
+    )
+
+    if mode == "manual":
+        global_max = marks_range
+    else:
+        global_max = st.number_input(
+            "Global maximum marks",
+            min_value=1,
+            value=100,
+            key="global_max_auto"
+        )
+
+    st.session_state.max_marks = int(global_max)
 
     diff_max_marks = st.radio(
-        "Do your subjects have different maximum marks?",
+        "Do any subjects have a different maximum marks?",
         options=["No — all subjects share the same max marks", "Yes — configure per subject"],
         key="diff_max_marks_radio"
     ) == "Yes — configure per subject"
 
     st.session_state.diff_max_marks = diff_max_marks
-
-    max_marks_config_valid = True  # used to gate the Run button
+    max_marks_config_valid = True
 
     if not diff_max_marks:
-        # Single global max — already captured in marks_range for manual mode; default 100 for auto
-        global_max = marks_range if mode == "manual" else st.number_input(
-            "Global maximum marks", min_value=1, value=100, key="global_max_auto"
-        )
         st.session_state.max_marks_config = int(global_max)
-        st.session_state.max_marks = int(global_max)
+
     else:
-        # Per-subject inputs
         if not ui_subjects:
-            st.warning("⚠️ Subject columns are not yet known. Please complete the mapping above first (manual mode) or upload a file (auto mode).")
+            st.warning(
+                "⚠️ Subject columns are not yet known. "
+                "Please complete the mapping above first (manual mode) or upload a file (auto mode)."
+            )
             max_marks_config_valid = False
             st.session_state.max_marks_config = {}
         else:
-            st.markdown("Enter the maximum marks for each subject:")
+            st.markdown("**Select subjects with non-standard maximum marks:**")
+            st.caption(
+                "Only subjects selected here will show a configuration input. "
+                "All other subjects automatically use the global max set above."
+            )
+
+            non_standard_subjects = st.multiselect(
+                "Subjects with different max marks",
+                options=ui_subjects,
+                key="non_standard_subjects_select"
+            )
+
             per_subject_config = {}
-            missing_any = False
 
-            # Render in rows of 3
-            subjects_chunked = [ui_subjects[i:i+3] for i in range(0, len(ui_subjects), 3)]
-            for chunk in subjects_chunked:
-                cols = st.columns(len(chunk))
-                for col, subj in zip(cols, chunk):
-                    with col:
-                        val = st.number_input(
-                            f"`{subj}`",
-                            min_value=1,
-                            value=100,
-                            step=1,
-                            key=f"max_marks_subj_{subj}"
-                        )
-                        per_subject_config[subj] = int(val)
+            if non_standard_subjects:
+                st.markdown("**Configure max marks for selected subjects:**")
+                st.caption(f"Defaults are set to global max ({int(global_max)}). Only change what differs.")
 
-            if missing_any:
-                st.warning("⚠️ Please enter max marks for all subjects before running.")
-                max_marks_config_valid = False
+                chunks = [non_standard_subjects[i:i+3] for i in range(0, len(non_standard_subjects), 3)]
+                for chunk in chunks:
+                    cols = st.columns(len(chunk))
+                    for col, subj in zip(cols, chunk):
+                        with col:
+                            val = st.number_input(
+                                f"`{subj}`",
+                                min_value=1,
+                                value=int(global_max),
+                                step=1,
+                                key=f"max_marks_subj_{subj}"
+                            )
+                            per_subject_config[subj] = int(val)
+
+            for subj in ui_subjects:
+                if subj not in per_subject_config:
+                    per_subject_config[subj] = int(global_max)
 
             st.session_state.max_marks_config = per_subject_config
-            # Store a representative global max for legacy uses
             st.session_state.max_marks = 100
 
 
