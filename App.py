@@ -29,6 +29,9 @@ if st.session_state.get("data_ready", False):
 uploaded_file = st.file_uploader("Upload student data (CSV or Excel)", type = ['csv', 'xlsx'])
 
 if uploaded_file is not None:
+    st.session_state.uploaded_file_bytes = uploaded_file.read()
+    st.session_state.uploaded_file_name = uploaded_file.name
+    uploaded_file.seek(0)
     try:
         st.session_state.raw_df = load_data(uploaded_file)
         st.session_state.data_ready = False
@@ -49,6 +52,11 @@ if "raw_df" not in st.session_state:
     st.stop()
     
 raw_df = st.session_state.raw_df
+
+import io
+if uploaded_file is None and st.session_state.get("uploaded_file_bytes"):
+    uploaded_file = io.BytesIO(st.session_state.uploaded_file_bytes)
+    uploaded_file.name = st.session_state.uploaded_file_name
 
 source_name = os.path.splitext(uploaded_file.name)[0] if uploaded_file is not None else "Unknown"
 

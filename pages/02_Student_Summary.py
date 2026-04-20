@@ -239,31 +239,25 @@ else:
     tab_chart, tab_data = st.tabs(["📈 Visualization", "📄 Full Student Details"])
 
     with tab_chart:
-        col_donut, col_details = st.columns([4, 6], gap="large")
+        total_cat_subjects = len(perf_dict["strengths"]) + len(perf_dict["average"]) + len(perf_dict["weaknesses"])
 
-        with col_donut:
-            st.markdown("<br><br>", unsafe_allow_html=True)
-            
+        if total_cat_subjects > 10:
+            # Stacked layout for large subject counts
             perf_fig = performance_category_donut(perf_dict)
             perf_fig.update_layout(
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
                 margin=dict(t=50, b=0, l=0, r=0),
-                height=300 
+                height=300
             )
             st.plotly_chart(perf_fig, use_container_width=True)
 
-        with col_details:
             with st.container(border=True):
                 st.markdown("##### 🔍 Subject Profile Summary")
                 st.caption("Classification based on unique subjects across all selected terms.")
-                
                 st.markdown("<br>", unsafe_allow_html=True)
-                
-                c1, c2, c3 = st.columns(3)
-                
-                with c1:
-                    st.markdown("🟢 **Strengths**")
+
+                with st.expander(f"🟢 Strengths ({len(perf_dict['strengths'])})"):
                     items = sorted(list(set(perf_dict["strengths"])))
                     if items:
                         for i in items:
@@ -271,8 +265,7 @@ else:
                     else:
                         st.caption("None")
 
-                with c2:
-                    st.markdown("🟡 **Average**")
+                with st.expander(f"🟡 Average ({len(perf_dict['average'])})"):
                     items = sorted(list(set(perf_dict["average"])))
                     if items:
                         for i in items:
@@ -280,16 +273,64 @@ else:
                     else:
                         st.caption("None")
 
-                with c3:
-                    st.markdown("🔴 **Weaknesses**")
+                with st.expander(f"🔴 Weaknesses ({len(perf_dict['weaknesses'])})"):
                     items = sorted(list(set(perf_dict["weaknesses"])))
                     if items:
                         for i in items:
                             st.markdown(f"- {i.title()}")
                     else:
                         st.caption("None")
+        else:
+            # Original side-by-side layout
+            col_donut, col_details = st.columns([4, 6], gap="large")
 
-                st.markdown("<br>", unsafe_allow_html=True)
+            with col_donut:
+                st.markdown("<br><br>", unsafe_allow_html=True)
+                perf_fig = performance_category_donut(perf_dict)
+                perf_fig.update_layout(
+                    showlegend=True,
+                    legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+                    margin=dict(t=50, b=0, l=0, r=0),
+                    height=300
+                )
+                st.plotly_chart(perf_fig, use_container_width=True)
+
+            with col_details:
+                with st.container(border=True):
+                    st.markdown("##### 🔍 Subject Profile Summary")
+                    st.caption("Classification based on unique subjects across all selected terms.")
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                    c1, c2, c3 = st.columns(3)
+
+                    with c1:
+                        st.markdown("🟢 **Strengths**")
+                        items = sorted(list(set(perf_dict["strengths"])))
+                        if items:
+                            for i in items:
+                                st.markdown(f"- {i.title()}")
+                        else:
+                            st.caption("None")
+
+                    with c2:
+                        st.markdown("🟡 **Average**")
+                        items = sorted(list(set(perf_dict["average"])))
+                        if items:
+                            for i in items:
+                                st.markdown(f"- {i.title()}")
+                        else:
+                            st.caption("None")
+
+                    with c3:
+                        st.markdown("🔴 **Weaknesses**")
+                        items = sorted(list(set(perf_dict["weaknesses"])))
+                        if items:
+                            for i in items:
+                                st.markdown(f"- {i.title()}")
+                        else:
+                            st.caption("None")
+
+                    st.markdown("<br>", unsafe_allow_html=True)
 
     with tab_data:
         st.caption("This table displays the complete subject-wise academic record for the selected student.")
