@@ -3,7 +3,7 @@ import pandas as pd
 import os
 from src.data_cleaning import load_data, load_excel_sheets, clean_data, normalize_columns, detect_subject_columns, compute_percentage_column
 from src.schema import ID_COLUMNS, MARKS_MAX, PASS_MARK
-from src.ui_components import inject_font, page_header, section_header
+from src.ui_components import inject_font, page_header, section_header, render_cleaning_report
 import time
 
 st.set_page_config(
@@ -349,9 +349,25 @@ if run_cleaning:
     st.session_state.data_ready = True
     st.session_state.pass_mark = pass_mark
     st.session_state.attendance_threshold = attendance_threshold
-    st.success("Data Cleaned Successfully ✅")
-
-from src.ui_components import inject_font, page_header, section_header, render_cleaning_report
 
 if "cleaning_report" in st.session_state:
     render_cleaning_report(st.session_state.cleaning_report)
+
+    long_df = st.session_state.long_df.copy()
+    long_df["attendance"] = pd.to_numeric(long_df["attendance"], errors="coerce")
+
+    wide_df = st.session_state.long_df.pivot_table(
+        index=["reg_no", "student_name", "class", "term", "attendance"],
+        columns="subject",
+        values="marks"
+    ).reset_index()
+    wide_df.columns.name = None
+
+    csv = wide_df.to_csv(index=False)
+    st.download_button(
+        label="⬇️ Download Cleaned Data (CSV)",
+        data=csv,
+        file_name="lume_cleaned.csv",
+        mime="text/csv"
+    )
+    st.success("Data Cleaned Successfully ✅")

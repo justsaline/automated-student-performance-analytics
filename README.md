@@ -26,7 +26,7 @@ The system is modular in design, separating responsibilities into data loading, 
 
 ### App — Data Upload & Cleaning
 
-The entry point for uploading and processing student data. Supports CSV and Excel files. Includes an auto mode for standard datasets and a manual mapping mode for non-standard column structures with configurable validation thresholds.
+The entry point for uploading and processing student data. Supports CSV and Excel files. Includes auto mode for standard datasets and manual mapping mode for non-standard column structures. Supports multi-sheet Excel files — each sheet can represent a different term or semester and is merged automatically. Configurable validation thresholds including per-subject maximum marks.
 
 ### Total Summary — Cohort Analytics
 
@@ -67,8 +67,8 @@ Automated-student-performance-analysis/
 
 | Module | Responsibility |
 |---|---|
-| `App.py` | File upload, cleaning execution, session state management |
-| `data_cleaning.py` | Full preprocessing pipeline — normalization, reshaping, validation |
+| `App.py` | File upload, sheet selection, cleaning execution, session state management |
+| `data_cleaning.py` | Full preprocessing pipeline — normalization, reshaping, validation, percentage normalization |
 | `analytics.py` | Student/subject summaries, ranking, at-risk detection |
 | `visualizations.py` | All Plotly chart generation |
 | `schema.py` | Canonical column names, aliases, and system constants |
@@ -87,6 +87,12 @@ A typical dataset structure:
 
 Identification columns are auto-detected via alias matching. Subject columns are inferred automatically or selected manually.
 
+### Multi-Sheet Excel Support
+
+Excel files with multiple sheets are supported. Each sheet typically represents a different term or semester and may contain different subject columns. LUME merges all selected sheets into a unified dataset after processing each independently.
+
+If a sheet has no term column, the sheet name is automatically used as the term value. If a CSV or single-sheet Excel file has no term column, the filename is used as the term value.
+
 ---
 
 ## Data Cleaning Pipeline
@@ -103,11 +109,11 @@ Subject columns are melted into a long-format structure where each row represent
 
 ### Marks Cleaning
 
-Numeric values are extracted via regex. Entries like "78 marks" or "90/100" are cleaned to plain numbers. Marks outside the configured valid range are set to null and reported. The maximum marks threshold is configurable per session.
+Numeric values are extracted via regex. Entries like "78 marks", "90 Score", or "68 MARKS" are cleaned to plain numbers. Marks outside the configured valid range are set to null and reported. The maximum marks threshold is configurable per session globally or per subject.
 
 ### Attendance Cleaning
 
-Attendance is standardized to percentage format. Decimals (0.85 → 85%), percentage symbols (75% → 75), and invalid entries are all handled. Range validation enforces 0–100.
+Attendance is standardized to percentage format. Decimals (0.85 → 85%), percentage symbols (75% → 75), text formats ("eighty"), and invalid entries are all handled. Range validation enforces 0–100.
 
 ### Row Validation & Deduplication
 
@@ -117,34 +123,42 @@ Rows are dropped if registration number or subject is missing, or if both marks 
 
 If the same registration number is linked to multiple student names, the pipeline raises a data integrity error before proceeding, prompting the user to fix the source file.
 
+### Percentage Normalization
+
+After cleaning, a `marks_pct` column is computed for every record. If all subjects share the same max marks, the global max is used. If subjects have different max marks (e.g. lab subjects out of 50, theory out of 100), each subject is normalized independently. All analytics and visualizations operate on the percentage scale internally while raw marks are preserved for display.
+
 ---
 
 ## Configurable Parameters
 
 ![Config](assets/configc.png)
 
-LUME supports runtime configuration of the following thresholds in manual mode:
+LUME supports runtime configuration of the following parameters:
 
 | Parameter | Default | Description |
 |---|---|---|
-| Max Marks | 100 | Upper bound for valid mark entries |
+| Max Marks | 100 | Upper bound for valid mark entries — global or per subject |
 | Pass Mark | 35 | Threshold below which a student is at-risk |
 | Attendance Threshold | 75% | Minimum attendance to avoid at-risk classification |
 
 These values are stored in session state and propagated across all pages without modifying `schema.py`.
+
+### Per-Subject Max Marks
+
+When subjects have different maximum marks, LUME allows per-subject configuration. The user selects which subjects have non-standard max marks and sets them individually. All other subjects automatically inherit the global max. Marks are then normalized to a 0–100 percentage scale before analysis.
 
 ---
 
 ## Analytical Features
 
 ### Subject-Level Summary
-Average marks, average attendance, and unique student count per subject.
+Average marks (%), average attendance, and unique student count per subject.
 
 ### Student-Level Summary
-Average marks, average attendance, and total subjects taken per student.
+Average marks (%), average attendance, and total subjects taken per student.
 
 ### Ranking
-Dense ranking based on average marks across all subjects a student has appeared in. Only students with marks in all subjects are ranked to ensure fairness. Multi-term datasets are fully supported.
+Dense ranking based on average percentage marks across all subjects a student has appeared in. Only students with marks in all subjects are ranked to ensure fairness. Multi-term datasets are fully supported.
 
 ### At-Risk Detection
 A student is flagged as at-risk if their average marks fall below the pass mark threshold OR their average attendance falls below the attendance threshold. Both conditions are evaluated independently.
@@ -152,7 +166,7 @@ A student is flagged as at-risk if their average marks fall below the pass mark 
 ![Risk Scatter](assets/riskscatter.png)
 
 ### Strength & Weakness Classification
-Per student, subjects are classified as strengths (≥ 75), average (40–74), or weaknesses (< 40).
+Per student, subjects are classified as strengths (≥ 75%), average (40–74%), or weaknesses (< 40%) based on normalized percentage scores.
 
 ---
 
@@ -171,12 +185,12 @@ The sidebar dynamically shows different context depending on the active page —
 
 ## Assumptions & Known Limitations
 
-- Marks are assumed to be numeric and percentage-based (out of a configurable max)
-- Attendance is assumed to be uniform per student per term
+- Attendance is assumed to be uniform per student per term across all subjects
 - No support for letter grade systems (A/B/C) — conversion would need to be done before upload
 - No multi-term longitudinal trend comparison across time
 - No predictive modeling component
 - Duplicate reg_no with different names raises a hard error rather than auto-resolving
+- Multi-sheet subject detection in auto mode is based on the first sheet at UI time — all sheets are fully processed at run time
 
 ---
 
@@ -214,7 +228,8 @@ This project demonstrates applied knowledge in:
 - Session state management in multi-page Streamlit apps
 - Dashboard-based reporting with Plotly
 - Reusable UI component design
+- Per-entity normalization and percentage scaling
 
 ---
 
-*LUME — Academic Intelligence Engine — v1.1.0*
+*LUME — Academic Intelligence Engine — v1.2.2*
