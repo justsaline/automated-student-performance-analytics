@@ -13,7 +13,7 @@ from src.visualizations import (
 )
 
 st.set_page_config(
-    page_title="Lume/Student Summary",
+    page_title="GFGC BCA Students Performance Analysis | Student Summary",
     page_icon="assets/icon.png",
     layout="wide"
 )
@@ -21,7 +21,7 @@ st.set_page_config(
 side_context = render_sidebar()
 inject_font()
 page_header(
-    label="Academic Analytics",
+    label="GFGC BCA Students Performance Analysis",
     title="Student Summary",
     subtitle="Individual academic performance breakdown by subject and term."
 )

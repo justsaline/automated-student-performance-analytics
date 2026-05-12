@@ -7,15 +7,14 @@ from src.ui_components import inject_font, page_header, section_header, render_c
 import time
 
 st.set_page_config(
-    page_title="Lume/upload",
+    page_title="GFGC BCA Students Performance Analysis",
     page_icon="assets/icon.png",
     layout="wide"
 )
-st.logo("assets/logo.png", icon_image="assets/icon.png")
 inject_font()
 page_header(
-    label="Academic Analytics",
-    title="Student Performance Analysis",
+    label="GFGC BCA",
+    title="GFGC BCA Students Performance Analysis",
     subtitle="Upload a student dataset to clean, analyse and visualise academic performance."
 )
 
@@ -389,7 +388,7 @@ if "cleaning_report" in st.session_state:
     st.download_button(
         label="⬇️ Download Cleaned Data (CSV)",
         data=csv,
-        file_name="lume_cleaned.csv",
+        file_name="gfgc_bca_cleaned.csv",
         mime="text/csv"
     )
     st.success("Data Cleaned Successfully ✅")

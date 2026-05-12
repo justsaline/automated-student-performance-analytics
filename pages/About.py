@@ -2,17 +2,16 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(
-    page_title="Lume/About | Student Performance Analysis",
+    page_title="GFGC BCA Students Performance Analysis | About",
     layout="wide", page_icon="assets/icon.png"
 )
-st.logo("assets/logo.png", icon_image="assets/icon.png")
 
 _, content, _ = st.columns([1, 3, 1])
 
 with content:
     st.title("About the System")
     st.markdown(
-        "Automated Student Performance Analysis is an analytical framework "
+        "GFGC BCA Students Performance Analysis is an analytical framework "
         "designed to transform fragmented academic records into standardized, "
         "actionable insights through automated data processing and visualization."
     )
@@ -108,6 +107,6 @@ with content:
 
     st.markdown(
         "<p style='text-align:center; color: gray; margin-top: 4rem; font-size: 0.8rem;'>"
-        "Automated Student Performance Analysis System v1.0</p>",
+        "GFGC BCA Students Performance Analysis v1.0</p>",
         unsafe_allow_html=True
     )

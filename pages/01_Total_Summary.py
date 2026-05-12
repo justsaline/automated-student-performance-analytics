@@ -5,14 +5,14 @@ from src.schema import PASS_MARK
 from src.ui_components import inject_font, page_header, render_sidebar
 
 st.set_page_config(
-    page_title="Lume/Total Summary",
+    page_title="GFGC BCA Students Performance Analysis | Total Summary",
     page_icon="assets/icon.png",
     layout="wide"
 )
 side_context = render_sidebar()
 inject_font()
 page_header(
-    label="Academic Analytics",
+    label="GFGC BCA Students Performance Analysis",
     title="Total Summary",
     subtitle="Cohort-level performance overview across all students and subjects."
 )

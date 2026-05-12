@@ -46,13 +46,9 @@ def section_header(title):
     """, unsafe_allow_html=True)
     
 def render_sidebar():
-    st.logo(
-        "assets/logo.png",
-        icon_image="assets/icon.png"
-    )
     with st.sidebar:
-        st.markdown("## ACADEMIC ENGINE")
-        st.caption("AUTOMATED PERFORMANCE ANALYSIS")
+        st.markdown("## GFGC BCA")
+        st.caption("STUDENTS PERFORMANCE ANALYSIS")
         st.divider()
         
         context_area = st.container()
