@@ -75,6 +75,9 @@ if st.session_state.get("excel_sheet_names"):
                 "Select additional sheets to merge them — useful when each sheet represents a different term or semester. "
                 "If a sheet has no term column, the sheet name will be used as the term automatically."
             )
+            # Restore widget key from backup if Streamlit cleared it on page navigation
+            if "selected_sheets" not in st.session_state and "_p_selected_sheets" in st.session_state:
+                st.session_state["selected_sheets"] = st.session_state["_p_selected_sheets"]
             _sheet_default = st.session_state.get("selected_sheets") or [all_sheets[0]]
             selected_sheets = st.multiselect(
                 "Select sheets to include",
@@ -82,25 +85,34 @@ if st.session_state.get("excel_sheet_names"):
                 default=_sheet_default,
                 key="selected_sheets"
             )
+            # Keep backup in sync (backup key is never cleared by Streamlit)
+            st.session_state["_p_selected_sheets"] = st.session_state["selected_sheets"]
             if not selected_sheets:
                 st.warning("⚠️ Please select at least one sheet.")
     else:
         selected_sheets = all_sheets
         st.session_state.selected_sheets = selected_sheets
+        st.session_state["_p_selected_sheets"] = selected_sheets
 else:
     selected_sheets = []
     st.session_state.selected_sheets = selected_sheets
+    st.session_state["_p_selected_sheets"] = selected_sheets
 
 with st.container(border=True):
     st.subheader("⚙️ Cleaning Mode")
     st.caption("Choose how columns should be interpreted. Auto tries to detect columns automatically. Manual lets you define mappings yourself.")
 
+    # Restore mode radio from backup if cleared by page navigation
+    if "mode_radio" not in st.session_state and "_p_mode_radio" in st.session_state:
+        st.session_state["mode_radio"] = st.session_state["_p_mode_radio"]
     mode = st.radio(
-        "Select Mode", 
+        "Select Mode",
         options=["Auto", "Manual"],
         horizontal=True,
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        key="mode_radio"
     )
+    st.session_state["_p_mode_radio"] = mode
 mode = mode.lower()
 
 manual_mapping = None
@@ -158,17 +170,32 @@ if mode == "manual":
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            marks_range = st.number_input("Enter maximum marks for validation:", min_value=1, value=MARKS_MAX)
+            if "manual_marks_range" not in st.session_state and "_p_manual_marks_range" in st.session_state:
+                st.session_state["manual_marks_range"] = st.session_state["_p_manual_marks_range"]
+            marks_range = st.number_input("Enter maximum marks for validation:", min_value=1, value=MARKS_MAX, key="manual_marks_range")
+            st.session_state["_p_manual_marks_range"] = marks_range
         with col2:
-            pass_mark = st.number_input("Pass mark", min_value=1, value=PASS_MARK)
+            if "manual_pass_mark" not in st.session_state and "_p_manual_pass_mark" in st.session_state:
+                st.session_state["manual_pass_mark"] = st.session_state["_p_manual_pass_mark"]
+            pass_mark = st.number_input("Pass mark", min_value=1, value=PASS_MARK, key="manual_pass_mark")
+            st.session_state["_p_manual_pass_mark"] = pass_mark
         with col3:
-            attendance_threshold = st.number_input("Attendance threshold (%)", min_value=1, max_value=100, value=75)
+            if "manual_att_thresh" not in st.session_state and "_p_manual_att_thresh" in st.session_state:
+                st.session_state["manual_att_thresh"] = st.session_state["_p_manual_att_thresh"]
+            attendance_threshold = st.number_input("Attendance threshold (%)", min_value=1, max_value=100, value=75, key="manual_att_thresh")
+            st.session_state["_p_manual_att_thresh"] = attendance_threshold
 
     st.markdown("#### 🔄 Dataset Mapping")
     with st.container(border=True):
         map_cols = st.columns(2)
         
         manual_mapping = {}
+        # Restore any map_ widget keys from backup before reading current selections
+        for _col in ID_COLUMNS:
+            _wk = f"map_{_col}"
+            if _wk not in st.session_state and f"_p_{_wk}" in st.session_state:
+                st.session_state[_wk] = st.session_state[f"_p_{_wk}"]
+
         current_id_selections = {
             col: st.session_state.get(f"map_{col}", "-- Not Present --")
             for col in ID_COLUMNS
@@ -192,6 +219,8 @@ if mode == "manual":
                     options=["-- Not Present --"] + available_options,
                     key=f"map_{canonical_col}"
                 )
+            # Keep backup in sync
+            st.session_state[f"_p_map_{canonical_col}"] = st.session_state[f"map_{canonical_col}"]
 
             if selected_col != "-- Not Present --":
                 manual_mapping[canonical_col] = selected_col
@@ -205,10 +234,18 @@ if mode == "manual":
             if st.session_state.get(f"map_{col}") != "-- Not Present --"
         }
         
+        available_subject_cols = [col for col in raw_df.columns if col not in used_columns]
+        if "manual_subject_cols" not in st.session_state and "_p_manual_subject_cols" in st.session_state:
+            # Restore only values that are still valid options
+            _restored = [c for c in st.session_state["_p_manual_subject_cols"] if c in available_subject_cols]
+            if _restored:
+                st.session_state["manual_subject_cols"] = _restored
         subject_columns = st.multiselect(
             "Select subject columns (marks columns)",
-            options=[col for col in raw_df.columns if col not in used_columns]
+            options=available_subject_cols,
+            key="manual_subject_cols"
         )
+        st.session_state["_p_manual_subject_cols"] = subject_columns
 
     if not manual_mapping or not subject_columns:
         st.warning("⚠️ Manual mode requires column mapping and subject selection.")
@@ -227,20 +264,26 @@ with st.container(border=True):
     if mode == "manual":
         global_max = marks_range
     else:
+        if "global_max_auto" not in st.session_state and "_p_global_max_auto" in st.session_state:
+            st.session_state["global_max_auto"] = st.session_state["_p_global_max_auto"]
         global_max = st.number_input(
             "Global maximum marks",
             min_value=1,
             value=100,
             key="global_max_auto"
         )
+        st.session_state["_p_global_max_auto"] = global_max
 
     st.session_state.max_marks = int(global_max)
 
+    if "diff_max_marks_radio" not in st.session_state and "_p_diff_max_marks_radio" in st.session_state:
+        st.session_state["diff_max_marks_radio"] = st.session_state["_p_diff_max_marks_radio"]
     diff_max_marks = st.radio(
         "Do any subjects have a different maximum marks?",
         options=["No — all subjects share the same max marks", "Yes — configure per subject"],
         key="diff_max_marks_radio"
     ) == "Yes — configure per subject"
+    st.session_state["_p_diff_max_marks_radio"] = st.session_state["diff_max_marks_radio"]
 
     st.session_state.diff_max_marks = diff_max_marks
     max_marks_config_valid = True
@@ -263,11 +306,16 @@ with st.container(border=True):
                 "All other subjects automatically use the global max set above."
             )
 
+            if "non_standard_subjects_select" not in st.session_state and "_p_non_standard_subjects_select" in st.session_state:
+                _restored_ns = [s for s in st.session_state["_p_non_standard_subjects_select"] if s in ui_subjects]
+                if _restored_ns:
+                    st.session_state["non_standard_subjects_select"] = _restored_ns
             non_standard_subjects = st.multiselect(
                 "Subjects with different max marks",
                 options=ui_subjects,
                 key="non_standard_subjects_select"
             )
+            st.session_state["_p_non_standard_subjects_select"] = non_standard_subjects
 
             per_subject_config = {}
 
@@ -280,13 +328,17 @@ with st.container(border=True):
                     cols = st.columns(len(chunk))
                     for col, subj in zip(cols, chunk):
                         with col:
+                            _subj_key = f"max_marks_subj_{subj}"
+                            if _subj_key not in st.session_state and f"_p_{_subj_key}" in st.session_state:
+                                st.session_state[_subj_key] = st.session_state[f"_p_{_subj_key}"]
                             val = st.number_input(
                                 f"`{subj}`",
                                 min_value=1,
                                 value=int(global_max),
                                 step=1,
-                                key=f"max_marks_subj_{subj}"
+                                key=_subj_key
                             )
+                            st.session_state[f"_p_{_subj_key}"] = val
                             per_subject_config[subj] = int(val)
 
             for subj in ui_subjects:
