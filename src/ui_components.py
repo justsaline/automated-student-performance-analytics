@@ -70,7 +70,7 @@ def render_sidebar():
         )
     return context_area
 
-def render_cleaning_report(report):
+def render_cleaning_report(report, dropped_df=None):
     rows_before = report["rows_before"]
     rows_after = report["rows_after"]
     rows_dropped = report["rows_dropped"]
@@ -86,10 +86,7 @@ def render_cleaning_report(report):
     rows_dropped_pct = round((rows_dropped / rows_before * 100), 1) if rows_before > 0 else 0
     rows_retained_pct = round((rows_after / rows_before * 100)) if rows_before > 0 else 0
 
-    with st.container(border=True):
-        st.markdown("<center><h2 style='font-size:24px; font-weight:500; margin:0 0 -25px;'>Cleaning Report</h2></center>", unsafe_allow_html=True)
-        st.divider()
-        st.markdown(f"""
+    _summary_html = f"""
         <style>
         .section-label {{ font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-tertiary); margin: 0 0 10px; }}
         .stat-card {{ background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px 16px; }}
@@ -132,7 +129,7 @@ def render_cleaning_report(report):
               <span class="badge" style="background:#FCEBEB;color:#A32D2D;">{invalid_marks_pct}% of entries</span>
             </div>
           </div>
-          <p class="section-label">Attendance & duplicates</p>
+          <p class="section-label">Attendance &amp; duplicates</p>
           <div class="grid3">
             <div class="stat-card">
               <p class="stat-label">Valid attendance</p>
@@ -148,4 +145,24 @@ def render_cleaning_report(report):
             </div>
           </div>
         </div>
-        """, unsafe_allow_html=True)
+        """
+
+    with st.container(border=True):
+        st.markdown("<center><h2 style='font-size:24px; font-weight:500; margin:0 0 -25px;'>Cleaning Report</h2></center>", unsafe_allow_html=True)
+        st.divider()
+
+        _dropped_count = len(dropped_df) if dropped_df is not None and not dropped_df.empty else 0
+        tab_summary, tab_dropped = st.tabs(["📊 Summary", f"🗑️ Dropped Rows ({_dropped_count:,})"])
+
+        with tab_summary:
+            st.markdown(_summary_html, unsafe_allow_html=True)
+
+        with tab_dropped:
+            if dropped_df is not None and not dropped_df.empty:
+                st.caption(
+                    f"{len(dropped_df):,} row(s) from the original file did not survive cleaning "
+                    "(missing reg_no, both marks and attendance absent, or duplicates)."
+                )
+                st.dataframe(dropped_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("No rows were dropped, or dropped row details are unavailable.")

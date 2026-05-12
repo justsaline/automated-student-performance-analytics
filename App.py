@@ -111,32 +111,35 @@ marks_range = MARKS_MAX
 st.session_state.max_marks = marks_range
 
 # detect subjects early for the auto-mode info banner
+# Rebuild entirely from every currently-selected sheet so that deselecting
+# Sheet 1 doesn't leave its subjects lingering in the list.
 auto_detected_subjects = []
 if mode == "auto":
     try:
-        all_auto_subjects = list(detect_subject_columns(normalize_columns(raw_df)))
-        
         current_selected = st.session_state.get("selected_sheets", [])
         excel_sheet_names = st.session_state.get("excel_sheet_names", [])
-        
-        if excel_sheet_names and len(current_selected) > 1 and uploaded_file is not None:
+
+        if excel_sheet_names and current_selected and uploaded_file is not None:
+            # Read every selected sheet independently
+            all_auto_subjects = []
             try:
-                uploaded_file.seek(0)
-                for sheet in current_selected[1:]:
+                for sheet in current_selected:
                     try:
-                        extra_df = pd.read_excel(uploaded_file, sheet_name=sheet)
                         uploaded_file.seek(0)
-                        extra_subjects = detect_subject_columns(normalize_columns(extra_df))
-                        for s in extra_subjects:
+                        sheet_df = pd.read_excel(uploaded_file, sheet_name=sheet)
+                        for s in detect_subject_columns(normalize_columns(sheet_df)):
                             if s not in all_auto_subjects:
                                 all_auto_subjects.append(s)
                     except Exception:
                         pass
             except Exception:
                 pass
-        
+        else:
+            # CSV or no sheet selection — fall back to raw_df
+            all_auto_subjects = list(detect_subject_columns(normalize_columns(raw_df)))
+
         auto_detected_subjects = all_auto_subjects
-        
+
     except Exception:
         auto_detected_subjects = []
 
@@ -344,14 +347,33 @@ if run_cleaning:
     max_marks_config = st.session_state.get("max_marks_config", st.session_state.get("max_marks", 100))
     cleaned_df = compute_percentage_column(cleaned_df, max_marks_config)
 
+    # Compute dropped rows: identify raw_df rows (wide format) that didn't
+    # survive cleaning by comparing reg_no values in cleaned_df vs raw_df.
+    try:
+        # Normalize raw_df column names to find the reg_no column
+        _norm_raw = normalize_columns(raw_df.copy())
+        if "reg_no" in _norm_raw.columns and "reg_no" in cleaned_df.columns:
+            kept_reg_nos = set(cleaned_df["reg_no"].dropna().unique())
+            _raw_reg_no = _norm_raw["reg_no"]
+            dropped_mask = ~_raw_reg_no.isin(kept_reg_nos) | _raw_reg_no.isna()
+            dropped_df = raw_df.loc[dropped_mask].reset_index(drop=True)
+        else:
+            dropped_df = pd.DataFrame()
+    except Exception:
+        dropped_df = pd.DataFrame()
+
     st.session_state.long_df = cleaned_df
     st.session_state.cleaning_report = report
+    st.session_state.dropped_df = dropped_df
     st.session_state.data_ready = True
     st.session_state.pass_mark = pass_mark
     st.session_state.attendance_threshold = attendance_threshold
 
 if "cleaning_report" in st.session_state:
-    render_cleaning_report(st.session_state.cleaning_report)
+    render_cleaning_report(
+        st.session_state.cleaning_report,
+        st.session_state.get("dropped_df", pd.DataFrame())
+    )
 
     long_df = st.session_state.long_df.copy()
     long_df["attendance"] = pd.to_numeric(long_df["attendance"], errors="coerce")
